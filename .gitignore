@@ -1,0 +1,12 @@
+# Direnv
+.direnv/
+
+# .NET
+bin/
+obj/
+
+# JavaScript
+build/
+dist/
+*.fs.js
+node_modules/
