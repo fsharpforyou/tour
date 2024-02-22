@@ -212,6 +212,7 @@ let update msg model =
             model with
                 FSharpCode = calculateFSharpCodeValue model.CurrentPage
                 Markdown = calculateMarkdownValue model.TableOfContents model.CurrentPage
+                Logs = []
         },
         Cmd.none
     | CalculateDocEntryNavigation ->
@@ -253,7 +254,7 @@ module View =
             router.onUrlChanged (SetUrl >> dispatch)
             router.children [
                 Html.header [
-                    prop.style [ style.height (length.vh 10) ]
+                    prop.style [ style.height (length.percent 10) ]
                     prop.children [
                         Html.nav [
                             Html.ul [
@@ -262,7 +263,7 @@ module View =
                                         prop.href "/#/"
                                         prop.children [
                                             Html.img [ prop.src "img/fsharp.png"; prop.width 40; prop.height 40 ]
-                                            Html.strong "F# For You!"
+                                            Html.strong " F# For You!"
                                         ]
                                     ]
                                 ]
@@ -275,10 +276,14 @@ module View =
                 ]
                 Html.main [
                     prop.role "group"
-                    prop.style [ style.height (length.vh 80) ]
+                    prop.style [ style.height (length.percent 90); style.width (length.percent 100) ]
                     prop.children [
                         Html.section [
-                            prop.style [ style.width (length.vw 50); style.overflow.scroll ]
+                            prop.style [
+                                style.overflow.scroll
+                                // style.borderRight (1, borderStyle.solid, "black")
+                                style.width (length.percent 50)
+                            ]
                             prop.children [
                                 Markdown.markdown (model.Markdown)
                                 Html.nav [
@@ -308,23 +313,31 @@ module View =
                             ]
                         ]
                         Html.section [
+                            prop.style [ style.width (length.percent 50) ]
                             prop.children [
                                 Html.section [
-                                    MonacoEditor.editor.editor [
-                                        MonacoEditor.props.defaultLanguage "fsharp"
-                                        MonacoEditor.props.height "60vh"
-                                        MonacoEditor.props.width "50vw"
-                                        MonacoEditor.props.value model.FSharpCode
-                                        MonacoEditor.props.theme "vs"
-                                        MonacoEditor.props.onChange (SetFSharpCode >> dispatch)
+                                    prop.style [ style.height (length.percent 60) ]
+                                    prop.children [
+                                        MonacoEditor.editor.editor [
+                                            MonacoEditor.props.defaultLanguage "fsharp"
+                                            MonacoEditor.props.value model.FSharpCode
+                                            MonacoEditor.props.theme "vs"
+                                            MonacoEditor.props.onChange (SetFSharpCode >> dispatch)
+                                        ]
                                     ]
                                 ]
                                 // TODO: Style this.
-                                Html.section [
-                                    prop.style [ style.height (length.vh 20) ]
+                                Html.article [
+                                    prop.style [
+                                        style.height (length.percent 40)
+                                    // style.borderTop (1, borderStyle.dotted, "black")
+                                    ]
                                     prop.children [
+                                        Html.h4 "Output"
                                         for (log, _) in model.Logs do
                                             Html.p log
+                                            Html.hr []
+
                                     ]
                                 ]
                             ]
@@ -344,18 +357,6 @@ module View =
                     ContainerOption.autoClose 2000
                     ContainerOption.position Position.BottomRight
                     ContainerOption.theme Theme.Light
-                ]
-                Html.footer [
-                    prop.style [ style.height (length.vh 10) ]
-                    prop.children [
-                        Html.small [
-                            Html.a [
-                                prop.target "_blank"
-                                prop.text "Source Code"
-                                prop.href "https://github.com/fsharpforyou/tour"
-                            ]
-                        ]
-                    ]
                 ]
             ]
         ]
