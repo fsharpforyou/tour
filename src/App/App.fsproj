@@ -11,13 +11,17 @@
     <Compile Include="../Standalone/Worker/Shared.fs" />
     <Compile Include="Monaco.fs" />
     <Compile Include="Generator.fs" />
+    <Compile Include="Documentation.fs" />
+    <Compile Include="Navigation.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Fable.Core" Version="4.3.0" />
+    <PackageReference Include="Fable.Fetch" Version="2.6.0" />
     <PackageReference Include="Fable.ReactToastify" Version="1.0.0" />
     <PackageReference Include="Feliz" Version="2.7.0" />
+    <PackageReference Include="Feliz.Markdown" Version="2.4.0" />
     <PackageReference Include="Feliz.Router" Version="4.0.0" />
     <PackageReference Include="Feliz.UseElmish" Version="2.5.0" />
     <PackageReference Include="Thoth.Json" Version="10.2.0" />
