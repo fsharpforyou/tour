@@ -1,5 +1,6 @@
 ﻿open Feliz
 open Feliz.UseElmish
+open Feliz.Router
 open Elmish
 open Browser
 open Fable.Core
@@ -8,48 +9,11 @@ open Thoth.Json
 open Fable.WebWorker
 open Fable.Standalone
 open Fable.ReactToastify
+open Feliz.Markdown
+open Documentation
+open Navigation
 
 importSideEffects "react-toastify/dist/ReactToastify.css"
-
-[<RequireQualifiedAccess>]
-type Theme =
-    | Light
-    | Dark
-
-[<RequireQualifiedAccess>]
-module Theme =
-    let toggle theme =
-        match theme with
-        | Theme.Light -> Theme.Dark
-        | Theme.Dark -> Theme.Light
-
-    let toMonacoTheme theme =
-        match theme with
-        | Theme.Light -> "vs"
-        | Theme.Dark -> "vs-dark"
-
-    let loadFromLocalStorage () =
-        match localStorage.getItem "theme" with
-        | "dark" -> Theme.Dark
-        | "light"
-        | _ -> Theme.Light
-
-    let saveToLocalStorage theme =
-        localStorage.setItem (
-            "theme",
-            match theme with
-            | Theme.Light -> "light"
-            | Theme.Dark -> "dark"
-        )
-
-type Model = {
-    Logs: string list
-    FSharpCode: string
-    CompiledJavaScript: string
-    IFrameUrl: string
-    Theme: Theme
-    Worker: ObservableWorker<WorkerAnswer>
-}
 
 [<RequireQualifiedAccess>]
 type LogLevel =
@@ -57,13 +21,30 @@ type LogLevel =
     | Warn
     | Error
 
+type Model = {
+    Logs: (string * LogLevel) list
+    FSharpCode: string
+    CompiledJavaScript: string
+    Markdown: string
+    IFrameUrl: string
+    Worker: ObservableWorker<WorkerAnswer>
+    TableOfContents: TableOfContents
+    CurrentPage: Navigation.Page
+    DocEntryNavigation: DocEntryNavigation
+}
+
 type Msg =
     | Compile
     | SetIFrameUrl of string
     | SetFSharpCode of string
+    | SetMarkdown of string
     | AddConsoleLog of LogLevel * string
     | Compiled of code: string * language: string * errors: Error array * stats: CompileStats
-    | ToggleTheme
+    | FetchedTableOfContents of TableOfContents
+    | FetchTableOfContentsExn of exn
+    | SetUrl of string list
+    | CalculateMarkdownAndCodeValues
+    | CalculateDocEntryNavigation
 
 module Iframe =
     type MessageArgs<'msg> = {
@@ -114,6 +95,11 @@ module WebWorker =
 
         [ handler ]
 
+let getCurrentPage tableOfContents url =
+    let flattenCategories = List.collect _.Pages
+    let pages = flattenCategories tableOfContents.Categories
+    Page.fromUrl pages url
+
 let init () =
     let fsharpOptions = [| "--define:FABLE_COMPILER"; "--langversion:preview" |]
     let worker = ObservableWorker(WebWorker.create (), WorkerAnswer.Decoder, "MAIN APP")
@@ -129,15 +115,25 @@ let init () =
                 ConsoleWarn = fun out -> AddConsoleLog(LogLevel.Warn, out)
                 ConsoleError = fun out -> AddConsoleLog(LogLevel.Error, out)
             }
+            Cmd.OfPromise.either loadTableOfContents () FetchedTableOfContents FetchTableOfContentsExn
         ]
+
+    let currentUrl = Router.currentUrl ()
+    let currentPage = getCurrentPage emptyTableOfContents currentUrl
 
     {
         Logs = []
         FSharpCode = ""
         CompiledJavaScript = ""
+        Markdown = ""
         IFrameUrl = ""
-        Theme = Theme.loadFromLocalStorage ()
         Worker = worker
+        TableOfContents = emptyTableOfContents
+        CurrentPage = currentPage
+        DocEntryNavigation = {
+            PreviousEntry = None
+            NextEntry = None
+        }
     },
     cmd
 
@@ -146,23 +142,39 @@ let compile model =
     let fsharpOptions = [||]
     CompileCode(model.FSharpCode, language, fsharpOptions) |> model.Worker.Post
 
+let helloWorldCode = "printfn \"Hello, World!\""
+
+let calculateMarkdownValue tableOfContents currentPage =
+    match currentPage with
+    | Page.DocEntry docPage -> docPage.MarkdownDocumentation
+    | Page.NotFound
+    | Page.Homepage -> tableOfContents.RootMarkdown
+    | Page.TableOfContents -> TableOfContents.toMarkdownString tableOfContents
+
+let calculateFSharpCodeValue currentPage =
+    match currentPage with
+    | Page.DocEntry docPage -> docPage.FSharpCode
+    | Page.NotFound
+    | Page.Homepage
+    | Page.TableOfContents -> helloWorldCode
+
 let update msg model =
     match msg with
     | Compile -> { model with Logs = [] }, Cmd.ofEffect (fun _ -> compile model)
     | SetIFrameUrl url -> { model with IFrameUrl = url }, Cmd.none
     | SetFSharpCode code -> { model with FSharpCode = code }, Cmd.none
+    | SetMarkdown doc -> { model with Markdown = doc }, Cmd.none
     | AddConsoleLog(level, output) ->
-        let logs = output :: model.Logs
+        let logs = (output, level) :: model.Logs
         { model with Logs = logs }, Cmd.none
     | Compiled(code, lang, errors, stats) ->
-        let compiledSuccessfully = errors.Length = 0
-
-        let toastCommand =
+        let toastCmd =
             Cmd.ofEffect (fun _ ->
-                if compiledSuccessfully then
-                    Toastify.success "Compiled Successfully." |> ignore
+                if errors.Length = 0 then
+                    Toastify.success "Compiled Successfully."
                 else
-                    Toastify.error "There were errors :(" |> ignore)
+                    Toastify.error "There were errors :("
+                |> ignore)
 
         // TODO: Handle errors and stats.
         printfn "Code: %s, Lang: %s, Errors: %A, Stats: %A" code lang errors stats
@@ -170,12 +182,52 @@ let update msg model =
 
         model,
         Cmd.batch [
-            toastCommand
+            toastCmd
             Cmd.OfFunc.perform Generator.generateHtmlBlobUrl model.CompiledJavaScript SetIFrameUrl
         ]
-    | ToggleTheme ->
-        let newTheme = Theme.toggle model.Theme
-        { model with Theme = newTheme }, Cmd.ofEffect (fun _ -> Theme.saveToLocalStorage newTheme)
+    | FetchedTableOfContents tableOfContents ->
+        let url = Router.currentUrl ()
+        let currentPage = getCurrentPage tableOfContents url
+
+        {
+            model with
+                CurrentPage = currentPage
+                TableOfContents = tableOfContents
+        },
+        Cmd.batch [
+            Cmd.ofMsg CalculateMarkdownAndCodeValues
+            Cmd.ofMsg CalculateDocEntryNavigation
+        ]
+    | FetchTableOfContentsExn exn -> model, Cmd.none // TODO: this.
+    | SetUrl url ->
+        let currentPage = getCurrentPage model.TableOfContents url
+
+        { model with CurrentPage = currentPage },
+        Cmd.batch [
+            Cmd.ofMsg CalculateMarkdownAndCodeValues
+            Cmd.ofMsg CalculateDocEntryNavigation
+        ]
+    | CalculateMarkdownAndCodeValues ->
+        {
+            model with
+                FSharpCode = calculateFSharpCodeValue model.CurrentPage
+                Markdown = calculateMarkdownValue model.TableOfContents model.CurrentPage
+                Logs = []
+        },
+        Cmd.none
+    | CalculateDocEntryNavigation ->
+        let allEntries = TableOfContents.allEntries model.TableOfContents
+
+        let currentEntry =
+            match model.CurrentPage with
+            | Page.DocEntry entry -> Entry entry
+            | _ -> NotViewingEntry
+
+        {
+            model with
+                DocEntryNavigation = getDocEntryNavigation currentEntry allEntries
+        },
+        Cmd.none
 
 module MonacoEditor =
     [<Erase>]
@@ -197,40 +249,116 @@ module View =
     let AppView () =
         let model, dispatch = React.useElmish (init, update)
 
-        Html.div [
-            Html.button [ prop.text "Toggle theme"; prop.onClick (fun _ -> dispatch ToggleTheme) ]
-            Html.button [ prop.text "Compile Code"; prop.onClick (fun _ -> dispatch Compile) ]
-            MonacoEditor.editor.editor [
-                MonacoEditor.props.defaultLanguage "fsharp"
-                MonacoEditor.props.height "90vh"
-                MonacoEditor.props.width "90vw"
-                MonacoEditor.props.value model.FSharpCode
-                MonacoEditor.props.theme (Theme.toMonacoTheme model.Theme)
-                MonacoEditor.props.onChange (SetFSharpCode >> dispatch)
-            ]
-            Html.div [
-                Html.h4 "Output:"
-                for log in model.Logs do
-                    Html.p log
-            ]
-            Html.iframe [
-                prop.src model.IFrameUrl
-                prop.style [
-                    style.position.absolute
-                    style.width 0
-                    style.height 0
-                    style.border (0, borderStyle.hidden, "")
+        // TODO: Semantic HTML and styling.
+        React.router [
+            router.onUrlChanged (SetUrl >> dispatch)
+            router.children [
+                Html.header [
+                    prop.style [ style.height (length.percent 10) ]
+                    prop.children [
+                        Html.nav [
+                            Html.ul [
+                                Html.li [
+                                    Html.a [
+                                        prop.href "/#/"
+                                        prop.children [
+                                            Html.img [ prop.src "img/fsharp.png"; prop.width 40; prop.height 40 ]
+                                            Html.strong " F# For You!"
+                                        ]
+                                    ]
+                                ]
+                            ]
+                            Html.ul [
+                                Html.button [ prop.text "Compile"; prop.onClick (fun _ -> dispatch Compile) ]
+                            ]
+                        ]
+                    ]
                 ]
-            ]
-            Toastify.container [
-                ContainerOption.autoClose 2000
-                ContainerOption.position Position.BottomRight
-                ContainerOption.theme (
-                    match model.Theme with
-                    | Theme.Light -> Fable.ReactToastify.Theme.Light
-                    | Theme.Dark -> Fable.ReactToastify.Theme.Dark
-                )
+                Html.main [
+                    prop.role "group"
+                    prop.style [ style.height (length.percent 90); style.width (length.percent 100) ]
+                    prop.children [
+                        Html.section [
+                            prop.style [
+                                style.overflow.scroll
+                                // style.borderRight (1, borderStyle.solid, "black")
+                                style.width (length.percent 50)
+                            ]
+                            prop.children [
+                                Markdown.markdown (model.Markdown)
+                                Html.nav [
+                                    Html.ul [
+                                        Html.li [
+                                            // TODO: Disabled style
+                                            match model.DocEntryNavigation.PreviousEntry with
+                                            | None -> Html.a [ prop.text "Previous Page" ]
+                                            | Some entry ->
+                                                Html.a [
+                                                    prop.href (Router.format entry.Route)
+                                                    prop.text "Previous Page"
+                                                ]
+                                        ]
+                                        Html.li [
+                                            Html.a [ prop.href "/#/table-of-contents"; prop.text "Table of Contents" ]
+                                        ]
+                                        Html.li [
+                                            // TODO: Disabled style
+                                            match model.DocEntryNavigation.NextEntry with
+                                            | None -> Html.a [ prop.text "Next Page" ]
+                                            | Some entry ->
+                                                Html.a [ prop.href (Router.format entry.Route); prop.text "Next Page" ]
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
+                        Html.section [
+                            prop.style [ style.width (length.percent 50) ]
+                            prop.children [
+                                Html.section [
+                                    prop.style [ style.height (length.percent 60) ]
+                                    prop.children [
+                                        MonacoEditor.editor.editor [
+                                            MonacoEditor.props.defaultLanguage "fsharp"
+                                            MonacoEditor.props.value model.FSharpCode
+                                            MonacoEditor.props.theme "vs"
+                                            MonacoEditor.props.onChange (SetFSharpCode >> dispatch)
+                                        ]
+                                    ]
+                                ]
+                                // TODO: Style this.
+                                Html.article [
+                                    prop.style [
+                                        style.height (length.percent 40)
+                                    // style.borderTop (1, borderStyle.dotted, "black")
+                                    ]
+                                    prop.children [
+                                        Html.h4 "Output"
+                                        for (log, _) in model.Logs do
+                                            Html.p log
+                                            Html.hr []
+
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+                Html.iframe [
+                    prop.src model.IFrameUrl
+                    prop.style [
+                        style.position.absolute
+                        style.width 0
+                        style.height 0
+                        style.border (0, borderStyle.hidden, "")
+                    ]
+                ]
+                Toastify.container [
+                    ContainerOption.autoClose 2000
+                    ContainerOption.position Position.BottomRight
+                    ContainerOption.theme Theme.Light
+                ]
             ]
         ]
 
-ReactDOM.createRoot(document.getElementById ("app")).render (View.AppView())
+ReactDOM.createRoot(document.getElementById "app").render (View.AppView())

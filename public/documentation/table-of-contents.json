@@ -1,0 +1,29 @@
+{
+    "root": "cover.md",
+    "categories": [
+        {
+            "title": "Basics",
+            "route_segment": "basics",
+            "pages": [
+                {
+                    "title": "Let Bindings",
+                    "route_segment": "bindings",
+                    "fsharp_file": "basics/bindings.fsx",
+                    "markdown_file": "basics/bindings.md"
+                }
+            ]
+        },
+        {
+            "title": "Algebraic Data Types",
+            "route_segment": "types",
+            "pages": [
+                {
+                    "title": "Discriminated Unions",
+                    "route_segment": "unions",
+                    "fsharp_file": "types/unions.fsx",
+                    "markdown_file": "types/unions.md"
+                }
+            ]
+        }
+    ]
+}

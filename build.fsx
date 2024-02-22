@@ -1,7 +1,6 @@
 #r "nuget: Fun.Build"
 #r "nuget: Fake.IO.FileSystem"
 
-open System.IO
 open Fun.Build
 open Fake.IO
 open Fake.IO.FileSystemOperators
@@ -49,40 +48,6 @@ pipeline "setup" {
     Stages.npmInstall
     Stages.clean
     Stages.copyModules
-
-    // stage "Copy *.js files into js/repl" {
-    //     run (fun ctx ->
-    //         for path in Directory.EnumerateFiles(Directories.fableStandaloneNpm </> "dist", "*.js") do
-    //             let destination = Directories.publicReplOutput </> Path.GetFileName(path)
-    //             File.Copy(path, destination)
-
-    //         Ok())
-    // }
-
-    // // TODO: Need to copy into subdirectory??? "Standalone/*.fs & Standalone/Worker/*.fs"
-    // // TODO: I can probably just stick this in the src/App/Standalone directory instead of src/Standalone
-    // stage "Copy *.fs files into Standalone project" {
-    //     run (fun ctx ->
-    //         for path in
-    //             Directory.EnumerateFiles(
-    //                 Directories.fableStandaloneNpm </> "src",
-    //                 "*.fs",
-    //                 EnumerationOptions(RecurseSubdirectories = true)
-    //             ) do
-    //             let destination = Directories.fableStandaloneFSharp </> Path.GetFileName(path)
-    //             File.Copy(path, destination)
-
-    //         Ok())
-    // }
-
-    // stage "Copy metadata folders" {
-    //     run (fun ctx ->
-    //         for path in Directory.EnumerateFiles(Directories.fableMetadataLib) do
-    //             let destination = Directories.publicMetadataOutput </> Path.GetFileName(path)
-    //             File.Copy(path, destination)
-
-    //         Ok())
-    // }
 
     runIfOnlySpecified
 }
