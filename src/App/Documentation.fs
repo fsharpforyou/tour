@@ -19,6 +19,9 @@ type TableOfContents = {
 
 [<RequireQualifiedAccess>]
 module TableOfContents =
+    let allEntries tableOfContents =
+        tableOfContents.Categories |> List.collect _.Pages
+
     let toMarkdownString tableOfContents =
         let bulletPoint value = $"* {value}"
         let createMarkdownLink value url = $"[{value}]({url})"

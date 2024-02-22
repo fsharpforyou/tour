@@ -30,6 +30,7 @@ type Model = {
     Worker: ObservableWorker<WorkerAnswer>
     TableOfContents: TableOfContents
     CurrentPage: Navigation.Page
+    DocEntryNavigation: DocEntryNavigation
 }
 
 type Msg =
@@ -43,6 +44,7 @@ type Msg =
     | FetchTableOfContentsExn of exn
     | SetUrl of string list
     | CalculateMarkdownAndCodeValues
+    | CalculateDocEntryNavigation
 
 module Iframe =
     type MessageArgs<'msg> = {
@@ -128,6 +130,10 @@ let init () =
         Worker = worker
         TableOfContents = emptyTableOfContents
         CurrentPage = currentPage
+        DocEntryNavigation = {
+            PreviousEntry = None
+            NextEntry = None
+        }
     },
     cmd
 
@@ -188,16 +194,37 @@ let update msg model =
                 CurrentPage = currentPage
                 TableOfContents = tableOfContents
         },
-        Cmd.ofMsg CalculateMarkdownAndCodeValues
+        Cmd.batch [
+            Cmd.ofMsg CalculateMarkdownAndCodeValues
+            Cmd.ofMsg CalculateDocEntryNavigation
+        ]
     | FetchTableOfContentsExn exn -> model, Cmd.none // TODO: this.
     | SetUrl url ->
         let currentPage = getCurrentPage model.TableOfContents url
-        { model with CurrentPage = currentPage }, Cmd.ofMsg CalculateMarkdownAndCodeValues
+
+        { model with CurrentPage = currentPage },
+        Cmd.batch [
+            Cmd.ofMsg CalculateMarkdownAndCodeValues
+            Cmd.ofMsg CalculateDocEntryNavigation
+        ]
     | CalculateMarkdownAndCodeValues ->
         {
             model with
                 FSharpCode = calculateFSharpCodeValue model.CurrentPage
                 Markdown = calculateMarkdownValue model.TableOfContents model.CurrentPage
+        },
+        Cmd.none
+    | CalculateDocEntryNavigation ->
+        let allEntries = TableOfContents.allEntries model.TableOfContents
+
+        let currentEntry =
+            match model.CurrentPage with
+            | Page.DocEntry entry -> Entry entry
+            | _ -> NotViewingEntry
+
+        {
+            model with
+                DocEntryNavigation = getDocEntryNavigation currentEntry allEntries
         },
         Cmd.none
 
@@ -256,11 +283,26 @@ module View =
                                 Markdown.markdown (model.Markdown)
                                 Html.nav [
                                     Html.ul [
-                                        Html.li [ Html.a [ prop.href "/#/"; prop.text "Previous Page" ] ]
+                                        Html.li [
+                                            // TODO: Disabled style
+                                            match model.DocEntryNavigation.PreviousEntry with
+                                            | None -> Html.a [ prop.text "Previous Page" ]
+                                            | Some entry ->
+                                                Html.a [
+                                                    prop.href (Router.format entry.Route)
+                                                    prop.text "Previous Page"
+                                                ]
+                                        ]
                                         Html.li [
                                             Html.a [ prop.href "/#/table-of-contents"; prop.text "Table of Contents" ]
                                         ]
-                                        Html.li [ Html.a [ prop.href "/#/"; prop.text "Next Page" ] ]
+                                        Html.li [
+                                            // TODO: Disabled style
+                                            match model.DocEntryNavigation.NextEntry with
+                                            | None -> Html.a [ prop.text "Next Page" ]
+                                            | Some entry ->
+                                                Html.a [ prop.href (Router.format entry.Route); prop.text "Next Page" ]
+                                        ]
                                     ]
                                 ]
                             ]
