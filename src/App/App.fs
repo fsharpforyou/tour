@@ -275,7 +275,7 @@ module View =
                             Html.ul [
                                 Html.li [
                                     Html.a [
-                                        prop.href "/#/"
+                                        prop.href (Router.format [])
                                         prop.children [
                                             Html.img [ prop.src "img/fsharp.png"; prop.width 40; prop.height 40 ]
                                             Html.strong " F# For You!"
@@ -307,7 +307,10 @@ module View =
                                                 ]
                                         ]
                                         Html.li [
-                                            Html.a [ prop.href "/#/table-of-contents"; prop.text "Table of Contents" ]
+                                            Html.a [
+                                                prop.href (Router.format [ "table-of-contents" ])
+                                                prop.text "Table of Contents"
+                                            ]
                                         ]
                                         Html.li [
                                             match model.DocEntryNavigation.NextEntry with
