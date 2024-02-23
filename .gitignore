@@ -6,7 +6,6 @@ bin/
 obj/
 
 # JavaScript
-build/
 dist/
 *.fs.js
 node_modules/
