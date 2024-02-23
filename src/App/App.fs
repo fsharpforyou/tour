@@ -289,9 +289,8 @@ module View =
                                 Html.nav [
                                     Html.ul [
                                         Html.li [
-                                            // TODO: Disabled style
                                             match model.DocEntryNavigation.PreviousEntry with
-                                            | None -> Html.a [ prop.text "Previous Page" ]
+                                            | None -> Html.none
                                             | Some entry ->
                                                 Html.a [
                                                     prop.href (Router.format entry.Route)
@@ -302,9 +301,8 @@ module View =
                                             Html.a [ prop.href "/#/table-of-contents"; prop.text "Table of Contents" ]
                                         ]
                                         Html.li [
-                                            // TODO: Disabled style
                                             match model.DocEntryNavigation.NextEntry with
-                                            | None -> Html.a [ prop.text "Next Page" ]
+                                            | None -> Html.none
                                             | Some entry ->
                                                 Html.a [ prop.href (Router.format entry.Route); prop.text "Next Page" ]
                                         ]
