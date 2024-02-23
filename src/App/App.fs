@@ -83,12 +83,12 @@ module WebWorker =
         let handler dispatch =
             worker
             |> Observable.add (function
-                | Loaded version -> printfn "Loaded %s" version
-                | LoadFailed -> printfn "Load failed"
-                | ParsedCode errors -> printfn "Parsed code: %A" errors
+                | Loaded version -> ()
+                | LoadFailed -> ()
+                | ParsedCode errors -> ()
                 | CompilationFinished(code, lang, errors, stats) -> dispatch (Compiled(code, lang, errors, stats))
-                | CompilationsFinished(code, lang, errors, stats) -> printfn "Compilations finished: %A" code
-                | CompilerCrashed msg -> printfn "Compiler crashed: %s" msg
+                | CompilationsFinished(code, lang, errors, stats) -> ()
+                | CompilerCrashed msg -> ()
                 | FoundTooltip _ -> ()
                 | FoundCompletions _ -> ()
                 | FoundDeclarationLocation _ -> ())
@@ -168,17 +168,33 @@ let update msg model =
         let logs = (output, level) :: model.Logs
         { model with Logs = logs }, Cmd.none
     | Compiled(code, lang, errors, stats) ->
+        let isSuccess = errors.Length = 0
+
         let toastCmd =
             Cmd.ofEffect (fun _ ->
-                if errors.Length = 0 then
+                if isSuccess then
                     Toastify.success "Compiled Successfully."
                 else
                     Toastify.error "There were errors :("
                 |> ignore)
 
+        let logs =
+            if isSuccess then
+                model.Logs
+            else
+                model.Logs
+                @ (errors
+                   |> Array.map (fun error ->
+                       let logLevel = if error.IsWarning then LogLevel.Warn else LogLevel.Error
+                       error.Message, logLevel)
+                   |> Array.toList)
+
         // TODO: Handle errors and stats.
-        printfn "Code: %s, Lang: %s, Errors: %A, Stats: %A" code lang errors stats
-        let model = { model with CompiledJavaScript = code }
+        let model = {
+            model with
+                CompiledJavaScript = code
+                Logs = logs
+        }
 
         model,
         Cmd.batch [
@@ -249,7 +265,6 @@ module View =
     let AppView () =
         let model, dispatch = React.useElmish (init, update)
 
-        // TODO: Semantic HTML and styling.
         React.router [
             router.onUrlChanged (SetUrl >> dispatch)
             router.children [
@@ -268,9 +283,7 @@ module View =
                                     ]
                                 ]
                             ]
-                            Html.ul [
-                                Html.button [ prop.text "Compile"; prop.onClick (fun _ -> dispatch Compile) ]
-                            ]
+                            Html.ul [ Html.button [ prop.text "Run"; prop.onClick (fun _ -> dispatch Compile) ] ]
                         ]
                     ]
                 ]
@@ -279,19 +292,14 @@ module View =
                     prop.style [ style.height (length.percent 90); style.width (length.percent 100) ]
                     prop.children [
                         Html.section [
-                            prop.style [
-                                style.overflow.scroll
-                                // style.borderRight (1, borderStyle.solid, "black")
-                                style.width (length.percent 50)
-                            ]
+                            prop.style [ style.overflow.scroll; style.width (length.percent 50) ]
                             prop.children [
                                 Markdown.markdown (model.Markdown)
                                 Html.nav [
                                     Html.ul [
                                         Html.li [
-                                            // TODO: Disabled style
                                             match model.DocEntryNavigation.PreviousEntry with
-                                            | None -> Html.a [ prop.text "Previous Page" ]
+                                            | None -> Html.none
                                             | Some entry ->
                                                 Html.a [
                                                     prop.href (Router.format entry.Route)
@@ -302,9 +310,8 @@ module View =
                                             Html.a [ prop.href "/#/table-of-contents"; prop.text "Table of Contents" ]
                                         ]
                                         Html.li [
-                                            // TODO: Disabled style
                                             match model.DocEntryNavigation.NextEntry with
-                                            | None -> Html.a [ prop.text "Next Page" ]
+                                            | None -> Html.none
                                             | Some entry ->
                                                 Html.a [ prop.href (Router.format entry.Route); prop.text "Next Page" ]
                                         ]
@@ -326,18 +333,24 @@ module View =
                                         ]
                                     ]
                                 ]
-                                // TODO: Style this.
                                 Html.article [
-                                    prop.style [
-                                        style.height (length.percent 40)
-                                    // style.borderTop (1, borderStyle.dotted, "black")
-                                    ]
+                                    prop.style [ style.height (length.percent 40); style.overflow.scroll ]
                                     prop.children [
                                         Html.h4 "Output"
-                                        for (log, _) in model.Logs do
-                                            Html.p log
-                                            Html.hr []
+                                        for (log, level) in model.Logs do
+                                            Html.p [
+                                                prop.style [
+                                                    style.color (
+                                                        match level with
+                                                        | LogLevel.Log -> "inherit"
+                                                        | LogLevel.Warn -> "darkorange"
+                                                        | LogLevel.Error -> "red"
+                                                    )
+                                                ]
+                                                prop.text log
+                                            ]
 
+                                            Html.hr []
                                     ]
                                 ]
                             ]

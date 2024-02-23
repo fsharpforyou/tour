@@ -1,7 +1,5 @@
 # F# Language Tour
 
-## Why should you learn F#?
-
 Hello there! Curious about this thing called F# and maybe even
 interested in learning it? You've come to the right place!
 
@@ -31,6 +29,11 @@ a language that values being *succinct*, *correct*, and
 F# is particularly good for web applications, machine learning, and
 data science. It's also great for interactive development, both via
 REPL and notebooks.
+
+This tour covers all aspects of the F# language, and assuming you have
+some prior programming experience should teach you everything you need to
+write real programs in F#. If at any point you get stuck or have a question do not hesitate to ask in the
+[F# Discord server](https://discord.gg/fsharp-196693847965696000).
 
 If this sounds appealing to you, then go on ahead and let's get
 started!

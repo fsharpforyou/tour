@@ -1,0 +1,4 @@
+dist/
+build/
+.direnv/
+src/Standalone/

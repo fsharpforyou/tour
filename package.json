@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "start": "dotnet fable watch src/App --verbose -o build --run vite"
+    "start": "dotnet fable watch src/App --verbose -o build --run vite",
+    "bundle": "dotnet fable src/App --outDir dist/ --run vite build"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",

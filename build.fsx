@@ -43,11 +43,40 @@ module Stages =
                     f.EndsWith(".fs")))
         }
 
+    let verify =
+        stage "Verify" {
+            stage "Check Formatting" { run "dotnet fantomas --check ." }
+            stage "Build" { run "dotnet build" }
+        }
+
+    let bundle = stage "Bundle" { run "npm run bundle" }
+
 pipeline "setup" {
     Stages.dotnetRestore
     Stages.npmInstall
     Stages.clean
     Stages.copyModules
+
+    runIfOnlySpecified
+}
+
+pipeline "verify" {
+    Stages.dotnetRestore
+    Stages.npmInstall
+    Stages.clean
+    Stages.copyModules
+    Stages.verify
+
+    runIfOnlySpecified
+}
+
+pipeline "bundle" {
+    Stages.dotnetRestore
+    Stages.npmInstall
+    Stages.clean
+    Stages.copyModules
+    Stages.verify
+    Stages.bundle
 
     runIfOnlySpecified
 }
