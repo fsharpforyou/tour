@@ -268,9 +268,7 @@ module View =
                                     ]
                                 ]
                             ]
-                            Html.ul [
-                                Html.button [ prop.text "Compile"; prop.onClick (fun _ -> dispatch Compile) ]
-                            ]
+                            Html.ul [ Html.button [ prop.text "Run"; prop.onClick (fun _ -> dispatch Compile) ] ]
                         ]
                     ]
                 ]
@@ -279,11 +277,7 @@ module View =
                     prop.style [ style.height (length.percent 90); style.width (length.percent 100) ]
                     prop.children [
                         Html.section [
-                            prop.style [
-                                style.overflow.scroll
-                                // style.borderRight (1, borderStyle.solid, "black")
-                                style.width (length.percent 50)
-                            ]
+                            prop.style [ style.overflow.scroll; style.width (length.percent 50) ]
                             prop.children [
                                 Markdown.markdown (model.Markdown)
                                 Html.nav [
@@ -324,13 +318,8 @@ module View =
                                         ]
                                     ]
                                 ]
-                                // TODO: Style this.
                                 Html.article [
-                                    prop.style [
-                                        style.height (length.percent 40)
-                                        style.overflow.scroll
-                                    // style.borderTop (1, borderStyle.dotted, "black")
-                                    ]
+                                    prop.style [ style.height (length.percent 40); style.overflow.scroll ]
                                     prop.children [
                                         Html.h4 "Output"
                                         for (log, _) in model.Logs do
