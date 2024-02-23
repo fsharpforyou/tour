@@ -2,26 +2,32 @@
     "root": "cover.md",
     "categories": [
         {
-            "title": "Basics",
-            "route_segment": "basics",
+            "title": "Functions",
+            "route_segment": "functions",
             "pages": [
                 {
-                    "title": "Let Bindings",
-                    "route_segment": "bindings",
-                    "fsharp_file": "basics/bindings.fsx",
-                    "markdown_file": "basics/bindings.md"
-                }
-            ]
-        },
-        {
-            "title": "Algebraic Data Types",
-            "route_segment": "types",
-            "pages": [
+                    "title": "Defining Functions",
+                    "route_segment": "definition",
+                    "fsharp_file": "functions/defining-functions.fsx",
+                    "markdown_file": "functions/defining-functions.md"
+                },
                 {
-                    "title": "Discriminated Unions",
-                    "route_segment": "unions",
-                    "fsharp_file": "types/unions.fsx",
-                    "markdown_file": "types/unions.md"
+                    "title": "Functions as Values",
+                    "route_segment": "values",
+                    "fsharp_file": "functions/functions-as-values.fsx",
+                    "markdown_file": "functions/functions-as-values.md"
+                },
+                {
+                    "title": "Currying and Partial Application",
+                    "route_segment": "currying-and-partial-application",
+                    "fsharp_file": "functions/currying-and-partial-application.fsx",
+                    "markdown_file": "functions/currying-and-partial-application.md"
+                },
+                {
+                    "title": "Pipelines and Composition",
+                    "route_segment": "pipelines-and-composition",
+                    "fsharp_file": "functions/pipelines-and-composition.fsx",
+                    "markdown_file": "functions/pipelines-and-composition.md"
                 }
             ]
         }
