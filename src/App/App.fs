@@ -330,6 +330,7 @@ module View =
                                 Html.article [
                                     prop.style [
                                         style.height (length.percent 40)
+                                        style.overflow.scroll
                                     // style.borderTop (1, borderStyle.dotted, "black")
                                     ]
                                     prop.children [
