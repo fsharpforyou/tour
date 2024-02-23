@@ -1,4 +1,4 @@
-name: gh-pages
+name: verify
 
 on: [push, pull_request]
 
