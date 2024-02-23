@@ -4,8 +4,7 @@ let host =
 #if DEBUG
     "http://localhost:5173/"
 #else
-    // TODO: set this.
-    "http://localhost:5173/"
+    "https://fsharpforyou.github.io/tour/"
 #endif
 
 let worker = host + "js/repl/worker.min.js"
