@@ -12,8 +12,10 @@ open Fable.ReactToastify
 open Feliz.Markdown
 open Documentation
 open Navigation
+open MonacoEditor
 
 importSideEffects "react-toastify/dist/ReactToastify.css"
+importSideEffects "./monaco-vite.js"
 
 [<RequireQualifiedAccess>]
 type LogLevel =
@@ -31,6 +33,8 @@ type Model = {
     TableOfContents: TableOfContents
     CurrentPage: Navigation.Page
     DocEntryNavigation: DocEntryNavigation
+    Editor: Monaco.Editor.IStandaloneCodeEditor
+    Markers: Monaco.Editor.IMarkerData array
 }
 
 type Msg =
@@ -45,6 +49,7 @@ type Msg =
     | SetUrl of string list
     | CalculateMarkdownAndCodeValues
     | CalculateDocEntryNavigation
+    | SetEditor of Monaco.Editor.IStandaloneCodeEditor
 
 module Iframe =
     type MessageArgs<'msg> = {
@@ -95,6 +100,40 @@ module WebWorker =
 
         [ handler ]
 
+module MonacoEditor =
+    // Source: https://github.com/fable-compiler/repl/blob/main/src/App/Editor.fs#L131C1-L142C58
+    let mapErrorToMarker (errors: Error[]) =
+        errors
+        |> Array.map (fun err ->
+            jsOptions<Monaco.Editor.IMarkerData> (fun m ->
+                m.startLineNumber <- err.StartLine
+                m.endLineNumber <- err.EndLine
+                m.startColumn <- float err.StartColumn + 1.
+                m.endColumn <- float err.EndColumn + 1.
+                m.message <- err.Message
+
+                m.severity <-
+                    match err.IsWarning with
+                    | false -> Monaco.MarkerSeverity.Error
+                    | true -> Monaco.MarkerSeverity.Warning))
+
+    [<Erase>]
+    type props =
+        static member inline onChange(f: string -> unit) = Interop.mkAttr "onChange" f
+        static member inline theme(value: string) = Interop.mkAttr "theme" value
+        static member inline defaultLanguage(value: string) = Interop.mkAttr "defaultLanguage" value
+        static member inline value(value: string) = Interop.mkAttr "value" value
+        static member inline width(value: string) = Interop.mkAttr "width" value
+        static member inline height(value: string) = Interop.mkAttr "height" value
+
+        static member inline onMount(f: System.Func<Monaco.Editor.IStandaloneCodeEditor, Monaco.IExports, unit>) =
+            Interop.mkAttr "onMount" f
+
+    [<Erase>]
+    type editor =
+        static member inline editor(properties: IReactProperty list) =
+            Interop.reactApi.createElement (import "Editor" "@monaco-editor/react", createObj !!properties)
+
 let getCurrentPage tableOfContents url =
     let flattenCategories = List.collect _.Pages
     let pages = flattenCategories tableOfContents.Categories
@@ -134,6 +173,8 @@ let init () =
             PreviousEntry = None
             NextEntry = None
         }
+        Editor = Unchecked.defaultof<Monaco.Editor.IStandaloneCodeEditor>
+        Markers = [||]
     },
     cmd
 
@@ -158,12 +199,18 @@ let calculateFSharpCodeValue currentPage =
     | Page.Homepage
     | Page.TableOfContents -> helloWorldCode
 
+let setErrors (model: Model) =
+    match model.Editor.getModel () with
+    | None -> ()
+    | Some textModel -> Monaco.editor.setModelMarkers (textModel, "FSharpErrors", ResizeArray model.Markers)
+
 let update msg model =
     match msg with
     | Compile -> { model with Logs = [] }, Cmd.ofEffect (fun _ -> compile model)
     | SetIFrameUrl url -> { model with IFrameUrl = url }, Cmd.none
     | SetFSharpCode code -> { model with FSharpCode = code }, Cmd.none
     | SetMarkdown doc -> { model with Markdown = doc }, Cmd.none
+    | SetEditor editor -> { model with Editor = editor }, Cmd.none
     | AddConsoleLog(level, output) ->
         let logs = (output, level) :: model.Logs
         { model with Logs = logs }, Cmd.none
@@ -178,6 +225,8 @@ let update msg model =
                     Toastify.error "There were errors :("
                 |> ignore)
 
+        let markers = MonacoEditor.mapErrorToMarker errors
+
         let logs =
             if isSuccess then
                 model.Logs
@@ -189,16 +238,17 @@ let update msg model =
                        error.Message, logLevel)
                    |> Array.toList)
 
-        // TODO: Handle errors and stats.
         let model = {
             model with
                 CompiledJavaScript = code
                 Logs = logs
+                Markers = markers
         }
 
         model,
         Cmd.batch [
             toastCmd
+            Cmd.ofEffect (fun _ -> setErrors model)
             Cmd.OfFunc.perform Generator.generateHtmlBlobUrl model.CompiledJavaScript SetIFrameUrl
         ]
     | FetchedTableOfContents tableOfContents ->
@@ -244,21 +294,6 @@ let update msg model =
                 DocEntryNavigation = getDocEntryNavigation currentEntry allEntries
         },
         Cmd.none
-
-module MonacoEditor =
-    [<Erase>]
-    type props =
-        static member inline onChange(f: string -> unit) = Interop.mkAttr "onChange" f
-        static member inline theme(value: string) = Interop.mkAttr "theme" value
-        static member inline defaultLanguage(value: string) = Interop.mkAttr "defaultLanguage" value
-        static member inline value(value: string) = Interop.mkAttr "value" value
-        static member inline width(value: string) = Interop.mkAttr "width" value
-        static member inline height(value: string) = Interop.mkAttr "height" value
-
-    [<Erase>]
-    type editor =
-        static member inline editor(properties: IReactProperty list) =
-            Interop.reactApi.createElement (import "Editor" "@monaco-editor/react", createObj !!properties)
 
 module View =
     [<ReactComponent>]
@@ -333,6 +368,7 @@ module View =
                                             MonacoEditor.props.value model.FSharpCode
                                             MonacoEditor.props.theme "vs"
                                             MonacoEditor.props.onChange (SetFSharpCode >> dispatch)
+                                            MonacoEditor.props.onMount (fun editor _ -> dispatch (SetEditor editor))
                                         ]
                                     ]
                                 ]
