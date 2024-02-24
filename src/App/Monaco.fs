@@ -1,5 +1,5 @@
 // ts2fable 0.9.0
-module rec Monaco
+module rec MonacoEditor
 
 #nowarn "3390" // disable warnings for invalid XML comments
 #nowarn "0044" // disable warnings for `Obsolete` usage
@@ -27,10 +27,10 @@ type Window =
     abstract MonacoEnvironment: Monaco.Environment option with get, set
 
 module Monaco =
-    [<Import("editor", "module/monaco")>]
+    [<Import("editor", "monaco-editor")>]
     let editor: Editor.IExports = jsNative
 
-    [<Import("languages", "module/monaco")>]
+    [<Import("languages", "monaco-editor")>]
     let languages: Languages.IExports = jsNative
 
     [<AllowNullLiteral>]
