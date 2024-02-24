@@ -597,13 +597,12 @@ let update msg model =
             Cmd.ofMsg CalculateDocEntryNavigation
         ]
     | CalculateMarkdownAndCodeValues ->
-        {
-            model with
-                FSharpCode = calculateFSharpCodeValue model.CurrentPage
-                Markdown = calculateMarkdownValue model.TableOfContents model.CurrentPage
-                Logs = []
-        },
-        Cmd.none
+        let fsharpCode = calculateFSharpCodeValue model.CurrentPage
+        let markdown = calculateMarkdownValue model.TableOfContents model.CurrentPage
+        // clear the logs when we calculate new values.
+        { model with Logs = [] },
+        // this has useful side-effects like triggering an initial parse through the `SetFSharpCode` msg.
+        Cmd.batch [ Cmd.ofMsg (SetFSharpCode fsharpCode); Cmd.ofMsg (SetMarkdown markdown) ]
     | CalculateDocEntryNavigation ->
         let allEntries = TableOfContents.allEntries model.TableOfContents
 
