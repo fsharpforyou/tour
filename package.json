@@ -7,6 +7,7 @@
     "@monaco-editor/react": "^4.6.0",
     "fable-metadata": "^2.2.0",
     "fable-standalone": "^3.8.0",
+    "monaco-editor": "^0.46.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^8.0.4",
