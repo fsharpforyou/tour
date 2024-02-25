@@ -630,7 +630,6 @@ type SyntaxHighlighter =
     static member inline language(value: string) = Interop.mkAttr "language" value
     static member inline style(value: string) = Interop.mkAttr "style" value
     static member inline children(value: ReactElement seq) = Interop.mkAttr "children" value
-    static member inline preTag(value: string) = Interop.mkAttr "PreTag" value
 
     static member inline highlighter(properties: IReactProperty list) =
         Interop.reactApi.createElement (
