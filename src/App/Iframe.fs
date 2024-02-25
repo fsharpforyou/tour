@@ -1,12 +1,39 @@
-// Source: https://github.com/fable-compiler/repl/blob/main/src/App/Generator.fs
-[<RequireQualifiedAccess>]
-module Generator
+module Iframe
 
 open System.Text.RegularExpressions
+open Thoth.Json
+open Browser
+open Browser.Types
 open Fable.Core
 open Fable.Core.JsInterop
-open Browser.Types
-open Browser
+
+type MessageArgs<'msg> = {
+    ConsoleLog: string -> 'msg
+    ConsoleWarn: string -> 'msg
+    ConsoleError: string -> 'msg
+}
+
+let command (args: MessageArgs<'Msg>) =
+    let handler dispatch =
+        window.addEventListener (
+            "message",
+            fun ev ->
+                let iframeMessageDecoder =
+                    Decode.field "type" Decode.string
+                    |> Decode.option
+                    |> Decode.andThen (function
+                        | Some "console_log" -> Decode.field "content" Decode.string |> Decode.map args.ConsoleLog
+                        | Some "console_warn" -> Decode.field "content" Decode.string |> Decode.map args.ConsoleWarn
+                        | Some "console_error" -> Decode.field "content" Decode.string |> Decode.map args.ConsoleError
+                        | _ -> Decode.fail "Invalid message")
+
+                Decode.fromValue "$" iframeMessageDecoder ev?data
+                |> function
+                    | Error _ -> ()
+                    | Ok msg -> dispatch msg
+        )
+
+    [ handler ]
 
 [<Global>]
 let URL: obj = jsNative
