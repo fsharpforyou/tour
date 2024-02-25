@@ -10,7 +10,6 @@ open Fable.WebWorker
 open Fable.Standalone
 open Fable.ReactToastify
 open Feliz.Markdown
-open Documentation
 open Navigation
 open MonacoEditor
 open System
@@ -39,7 +38,7 @@ type Model = {
     Markdown: string
     IFrameUrl: string
     Worker: ObservableWorker<WorkerAnswer>
-    TableOfContents: TableOfContents
+    TableOfContents: Documentation.TableOfContents
     CurrentPage: Navigation.Page
     DocEntryNavigation: DocEntryNavigation
     Editor: Monaco.Editor.IStandaloneCodeEditor
@@ -54,7 +53,7 @@ type Msg =
     | SetMarkdown of string
     | AddConsoleLog of LogLevel * string
     | Compiled of code: string * language: string * errors: Error array * stats: CompileStats
-    | FetchedTableOfContents of TableOfContents
+    | FetchedTableOfContents of Documentation.TableOfContents
     | FetchTableOfContentsExn of exn
     | SetUrl of string list
     | CalculateMarkdownAndCodeValues
@@ -111,8 +110,7 @@ module WebWorker =
         [ handler ]
 
 let getCurrentPage tableOfContents url =
-    let flattenCategories = List.collect _.Pages
-    let pages = flattenCategories tableOfContents.Categories
+    let pages = Documentation.TableOfContents.allPages tableOfContents
     Page.fromUrl pages url
 
 let init () =
@@ -130,11 +128,12 @@ let init () =
                 ConsoleWarn = fun out -> AddConsoleLog(LogLevel.Warn, out)
                 ConsoleError = fun out -> AddConsoleLog(LogLevel.Error, out)
             }
-            Cmd.OfPromise.either loadTableOfContents () FetchedTableOfContents FetchTableOfContentsExn
+            Cmd.OfPromise.either Documentation.loadTableOfContents () FetchedTableOfContents FetchTableOfContentsExn
         ]
 
     let currentUrl = Router.currentUrl ()
-    let currentPage = getCurrentPage emptyTableOfContents currentUrl
+    let tableOfContents = Documentation.emptyTableOfContents
+    let currentPage = getCurrentPage tableOfContents currentUrl
 
     {
         Logs = []
@@ -143,7 +142,7 @@ let init () =
         Markdown = ""
         IFrameUrl = ""
         Worker = worker
-        TableOfContents = emptyTableOfContents
+        TableOfContents = tableOfContents
         CurrentPage = currentPage
         DocEntryNavigation = {
             PreviousEntry = None
@@ -162,16 +161,16 @@ let compile model =
 
 let helloWorldCode = "printfn \"Hello, World!\""
 
-let calculateMarkdownValue tableOfContents currentPage =
+let calculateMarkdownValue (tableOfContents: Documentation.TableOfContents) currentPage =
     match currentPage with
-    | Page.DocEntry docPage -> docPage.MarkdownDocumentation
+    | Page.DocPage docPage -> docPage.MarkdownDocumentation
     | Page.NotFound
     | Page.Homepage -> tableOfContents.RootMarkdown
-    | Page.TableOfContents -> TableOfContents.toMarkdownString tableOfContents
+    | Page.TableOfContents -> Documentation.TableOfContents.toMarkdownString tableOfContents
 
 let calculateFSharpCodeValue currentPage =
     match currentPage with
-    | Page.DocEntry docPage -> docPage.FSharpCode
+    | Page.DocPage docPage -> docPage.FSharpCode
     | Page.NotFound
     | Page.Homepage
     | Page.TableOfContents -> helloWorldCode
@@ -268,11 +267,11 @@ let update msg model =
         // this has useful side-effects like triggering an initial parse through the `SetFSharpCode` msg.
         Cmd.batch [ Cmd.ofMsg (SetFSharpCode fsharpCode); Cmd.ofMsg (SetMarkdown markdown) ]
     | CalculateDocEntryNavigation ->
-        let allEntries = TableOfContents.allEntries model.TableOfContents
+        let allEntries = Documentation.TableOfContents.allPages model.TableOfContents
 
         let currentEntry =
             match model.CurrentPage with
-            | Page.DocEntry entry -> Entry entry
+            | Page.DocPage docPage -> Entry docPage
             | _ -> NotViewingEntry
 
         {
