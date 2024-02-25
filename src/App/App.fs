@@ -625,6 +625,19 @@ let update msg model =
         },
         debouncerCmd
 
+[<Erase>]
+type SyntaxHighlighter =
+    static member inline language(value: string) = Interop.mkAttr "language" value
+    static member inline style(value: string) = Interop.mkAttr "style" value
+    static member inline children(value: ReactElement seq) = Interop.mkAttr "children" value
+    static member inline preTag(value: string) = Interop.mkAttr "PreTag" value
+
+    static member inline highlighter(properties: IReactProperty list) =
+        Interop.reactApi.createElement (
+            import "Prism as ReactSyntaxHighlighter" "react-syntax-highlighter",
+            createObj !!properties
+        )
+
 module View =
     [<ReactComponent>]
     let AppView () =
@@ -659,7 +672,26 @@ module View =
                         Html.section [
                             prop.style [ style.overflow.scroll; style.width (length.percent 50) ]
                             prop.children [
-                                Markdown.markdown (model.Markdown)
+                                Markdown.markdown [
+                                    markdown.children model.Markdown
+                                    markdown.components [
+                                        markdown.components.code (fun props ->
+                                            if props.isInline then
+                                                Html.code props.children
+                                            else
+                                                let style =
+                                                    import "vs" "react-syntax-highlighter/dist/esm/styles/prism"
+
+                                                let language = props.className.Replace("language-", "")
+
+                                                SyntaxHighlighter.highlighter [
+                                                    SyntaxHighlighter.language language
+                                                    SyntaxHighlighter.style style
+                                                    SyntaxHighlighter.children props.children
+                                                ])
+                                    ]
+                                ]
+
                                 Html.nav [
                                     Html.ul [
                                         Html.li [
