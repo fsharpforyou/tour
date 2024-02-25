@@ -782,7 +782,7 @@ module View =
                                         prop.target "_blank"
                                         prop.children [
                                             Html.img [ prop.src "img/fable.png"; prop.width 40; prop.height 40 ]
-                                            Html.p " Powered by Fable"
+                                            Html.small " Powered by Fable"
                                         ]
                                     ]
                                 ]
@@ -792,7 +792,7 @@ module View =
                                         prop.target "_blank"
                                         prop.children [
                                             Html.img [ prop.src "img/github.png"; prop.width 40; prop.height 40 ]
-                                            Html.p " View Source Code"
+                                            Html.small " View Source Code"
                                         ]
                                     ]
                                 ]
