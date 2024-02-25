@@ -782,7 +782,17 @@ module View =
                                         prop.target "_blank"
                                         prop.children [
                                             Html.img [ prop.src "img/fable.png"; prop.width 40; prop.height 40 ]
-                                            Html.strong " Powered by Fable"
+                                            Html.p " Powered by Fable"
+                                        ]
+                                    ]
+                                ]
+                                Html.li [
+                                    Html.a [
+                                        prop.href "https://github.com/fsharpforyou/tour"
+                                        prop.target "_blank"
+                                        prop.children [
+                                            Html.img [ prop.src "img/github.png"; prop.width 40; prop.height 40 ]
+                                            Html.p " View Source Code"
                                         ]
                                     ]
                                 ]
