@@ -666,7 +666,7 @@ module View =
                 ]
                 Html.main [
                     prop.role "group"
-                    prop.style [ style.height (length.percent 90); style.width (length.percent 100) ]
+                    prop.style [ style.height (length.percent 80); style.width (length.percent 100) ]
                     prop.children [
                         Html.section [
                             prop.style [ style.overflow.scroll; style.width (length.percent 50) ]
@@ -734,7 +734,7 @@ module View =
                                     ]
                                 ]
                                 Html.article [
-                                    prop.style [ style.height (length.percent 40); style.overflow.scroll ]
+                                    prop.style [ style.height (length.percent 30); style.overflow.scroll ]
                                     prop.children [
                                         Html.h4 "Output"
                                         for (log, level) in model.Logs do
@@ -770,6 +770,25 @@ module View =
                     ContainerOption.autoClose 2000
                     ContainerOption.position Position.BottomRight
                     ContainerOption.theme Theme.Light
+                ]
+                Html.footer [
+                    prop.style [ style.height (length.percent 10) ]
+                    prop.children [
+                        Html.nav [
+                            Html.ul [
+                                Html.li [
+                                    Html.a [
+                                        prop.href "https://fable.io"
+                                        prop.target "_blank"
+                                        prop.children [
+                                            Html.img [ prop.src "img/fable.png"; prop.width 40; prop.height 40 ]
+                                            Html.strong " Powered by Fable"
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
                 ]
             ]
         ]
