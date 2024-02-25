@@ -1,16 +1,17 @@
+[<RequireQualifiedAccess>]
 module Documentation
 
 open Feliz.Router
 open Thoth.Json
 
-type Entry = {
+type Page = {
     Title: string
     Route: string list
     FSharpCode: string
     MarkdownDocumentation: string
 }
 
-type Category = { Title: string; Pages: Entry list }
+type Category = { Title: string; Pages: Page list }
 
 type TableOfContents = {
     RootMarkdown: string
@@ -19,7 +20,7 @@ type TableOfContents = {
 
 [<RequireQualifiedAccess>]
 module TableOfContents =
-    let allEntries tableOfContents =
+    let allPages tableOfContents =
         tableOfContents.Categories |> List.collect _.Pages
 
     let toMarkdownString tableOfContents =
@@ -43,73 +44,94 @@ module TableOfContents =
         @ List.collect createMarkdownForCategory tableOfContents.Categories
         |> String.concat "\n"
 
-let decodePage =
-    Decode.object (fun get -> {|
-        title = get.Required.Field "title" Decode.string
-        routeSegment = get.Required.Field "route_segment" Decode.string
-        fsharpFile = get.Required.Field "fsharp_file" Decode.string
-        markdownFile = get.Required.Field "markdown_file" Decode.string
-    |})
+module private Json =
+    type PageJson = {
+        Title: string
+        RouteSegment: string
+        FSharpFile: string
+        MarkdownFile: string
+    }
 
-let decodeCategory =
-    Decode.object (fun get -> {|
-        title = get.Required.Field "title" Decode.string
-        routeSegment = get.Required.Field "route_segment" Decode.string
-        pages = get.Required.Field "pages" (Decode.list decodePage)
-    |})
+    type CategoryJson = {
+        Title: string
+        RouteSegment: string
+        Pages: PageJson list
+    }
 
-let decoder =
-    Decode.object (fun get -> {|
-        rootMarkdownFile = get.Required.Field "root" Decode.string
-        categories = get.Required.Field "categories" (Decode.list decodeCategory)
-    |})
+    type TableOfContentsJson = {
+        RootMarkdownFile: string
+        Categories: CategoryJson list
+    }
 
-let documentationPath path = Constants.documentation + path
+    let pageDecoder =
+        Decode.object (fun get -> {
+            Title = get.Required.Field "title" Decode.string
+            RouteSegment = get.Required.Field "route_segment" Decode.string
+            FSharpFile = get.Required.Field "fsharp_file" Decode.string
+            MarkdownFile = get.Required.Field "markdown_file" Decode.string
+        })
+
+    let categoryDecoder =
+        Decode.object (fun get -> {
+            Title = get.Required.Field "title" Decode.string
+            RouteSegment = get.Required.Field "route_segment" Decode.string
+            Pages = get.Required.Field "pages" (Decode.list pageDecoder)
+        })
+
+    let tableOfContentsDecoder =
+        Decode.object (fun get -> {
+            RootMarkdownFile = get.Required.Field "root" Decode.string
+            Categories = get.Required.Field "categories" (Decode.list categoryDecoder)
+        })
+
 let emptyTableOfContents = { RootMarkdown = ""; Categories = [] }
+let private documentationPath path = Constants.documentation + path
 
-let fetchAsString path =
+let private fetchAsString path =
     Fetch.fetch path [] |> Promise.bind (fun res -> res.text ())
+
+let private loadPageFromJson (categoryJson: Json.CategoryJson) (pageJson: Json.PageJson) =
+    promise {
+        let! fsharpCode = fetchAsString (documentationPath pageJson.FSharpFile)
+        let! markdownDoc = fetchAsString (documentationPath pageJson.MarkdownFile)
+
+        return {
+            Title = pageJson.Title
+            Route = [ categoryJson.RouteSegment; pageJson.RouteSegment ]
+            FSharpCode = fsharpCode
+            MarkdownDocumentation = markdownDoc
+        }
+    }
+
+let private loadCategoryFromJson (categoryJson: Json.CategoryJson) =
+    promise {
+        let! pages =
+            categoryJson.Pages
+            |> List.map (fun page -> loadPageFromJson categoryJson page)
+            |> Promise.all
+
+        return {
+            Title = categoryJson.Title
+            Pages = Seq.toList pages
+        }
+    }
+
+let private loadTableOfContentsFromJson (tableOfContentsJson: Json.TableOfContentsJson) =
+    promise {
+        let! rootMarkdown = fetchAsString (documentationPath tableOfContentsJson.RootMarkdownFile)
+        let! categories = tableOfContentsJson.Categories |> Seq.map loadCategoryFromJson |> Promise.all
+
+        return {
+            RootMarkdown = rootMarkdown
+            Categories = Seq.toList categories
+        }
+    }
 
 let loadTableOfContents () =
     Fetch.fetch Constants.tableOfContents []
     |> Promise.bind (fun response -> response.json ())
-    |> Promise.map (fun json -> Decode.fromValue "$" decoder json)
-    |> Promise.bind (fun result ->
-        match result with
-        | Error _ -> Promise.lift emptyTableOfContents
-        | Ok contents ->
-            promise {
-                let! rootMarkdown = fetchAsString (documentationPath contents.rootMarkdownFile)
-
-                let! categories =
-                    contents.categories
-                    |> Seq.map (fun category ->
-                        promise {
-                            let! pages =
-                                category.pages
-                                |> List.map (fun page ->
-                                    promise {
-                                        let! fsharpCode = fetchAsString (documentationPath page.fsharpFile)
-                                        let! markdownDoc = fetchAsString (documentationPath page.markdownFile)
-
-                                        return {
-                                            Title = page.title
-                                            Route = [ category.routeSegment; page.routeSegment ]
-                                            FSharpCode = fsharpCode
-                                            MarkdownDocumentation = markdownDoc
-                                        }
-                                    })
-                                |> Promise.all
-
-                            return {
-                                Title = category.title
-                                Pages = Seq.toList pages
-                            }
-                        })
-                    |> Promise.all
-
-                return {
-                    RootMarkdown = rootMarkdown
-                    Categories = Seq.toList categories
-                }
-            })
+    |> Promise.map (fun json -> Decode.fromValue "$" Json.tableOfContentsDecoder json)
+    |> Promise.bind (
+        Result.map loadTableOfContentsFromJson
+        >> Result.defaultValue (Promise.lift emptyTableOfContents)
+    )

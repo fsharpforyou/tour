@@ -1,36 +1,34 @@
 module Navigation
 
-open Documentation
-
 [<RequireQualifiedAccess>]
 type Page =
     | Homepage
     | TableOfContents
-    | DocEntry of Entry
+    | DocPage of Documentation.Page
     | NotFound
 
 [<RequireQualifiedAccess>]
 module Page =
-    let fromUrl docEntries url =
+    let fromUrl docPages url =
         match url with
         | [] -> Page.Homepage
         | [ "table-of-contents" ] -> Page.TableOfContents
         | routeSegments ->
-            docEntries
-            |> List.tryFind (fun docEntry -> docEntry.Route = routeSegments)
-            |> Option.map Page.DocEntry
+            docPages
+            |> List.tryFind (fun (docPage: Documentation.Page) -> docPage.Route = routeSegments)
+            |> Option.map Page.DocPage
             |> Option.defaultValue Page.NotFound
 
 type CurrentEntry =
-    | Entry of Entry
+    | Entry of Documentation.Page
     | NotViewingEntry
 
 type DocEntryNavigation = {
-    PreviousEntry: Entry option
-    NextEntry: Entry option
+    PreviousEntry: Documentation.Page option
+    NextEntry: Documentation.Page option
 }
 
-let getDocEntryNavigation (currentEntry: CurrentEntry) (allEntries: Entry list) =
+let getDocEntryNavigation (currentEntry: CurrentEntry) (allEntries: Documentation.Page list) =
     let previous, next =
         match currentEntry with
         | NotViewingEntry ->
