@@ -660,16 +660,42 @@ module View =
                                     ]
                                 ]
                             ]
+                            Html.ul [
+                                Html.li [
+                                    Html.a [
+                                        prop.href "https://fable.io"
+                                        prop.target "_blank"
+                                        prop.children [
+                                            Html.img [ prop.src "img/fable.png"; prop.width 40; prop.height 40 ]
+                                            Html.small " Powered by Fable"
+                                        ]
+                                    ]
+                                ]
+                                Html.li [
+                                    Html.a [
+                                        prop.href "https://github.com/fsharpforyou/tour"
+                                        prop.target "_blank"
+                                        prop.children [
+                                            Html.img [ prop.src "img/github.png"; prop.width 40; prop.height 40 ]
+                                            Html.small " View Source Code"
+                                        ]
+                                    ]
+                                ]
+                            ]
                             Html.ul [ Html.button [ prop.text "Run"; prop.onClick (fun _ -> dispatch Compile) ] ]
                         ]
                     ]
                 ]
                 Html.main [
                     prop.role "group"
-                    prop.style [ style.height (length.percent 80); style.width (length.percent 100) ]
+                    prop.style [ style.height (length.percent 90) ]
                     prop.children [
                         Html.section [
-                            prop.style [ style.overflow.scroll; style.width (length.percent 50) ]
+                            prop.style [
+                                style.width (length.percent 50)
+                                style.overflow.scroll
+                                style.overflowX.hidden
+                            ]
                             prop.children [
                                 Markdown.markdown [
                                     markdown.children model.Markdown
@@ -722,7 +748,7 @@ module View =
                             prop.style [ style.width (length.percent 50) ]
                             prop.children [
                                 Html.section [
-                                    prop.style [ style.height (length.percent 60) ]
+                                    prop.style [ style.height (length.percent 70) ]
                                     prop.children [
                                         MonacoEditor.editor.editor [
                                             MonacoEditor.props.defaultLanguage "fsharp"
@@ -734,7 +760,11 @@ module View =
                                     ]
                                 ]
                                 Html.article [
-                                    prop.style [ style.height (length.percent 30); style.overflow.scroll ]
+                                    prop.style [
+                                        style.height (length.percent 30)
+                                        style.overflow.scroll
+                                        style.overflowX.hidden
+                                    ]
                                     prop.children [
                                         Html.h4 "Output"
                                         for (log, level) in model.Logs do
@@ -770,35 +800,6 @@ module View =
                     ContainerOption.autoClose 2000
                     ContainerOption.position Position.BottomRight
                     ContainerOption.theme Theme.Light
-                ]
-                Html.footer [
-                    prop.style [ style.height (length.percent 10) ]
-                    prop.children [
-                        Html.nav [
-                            Html.ul [
-                                Html.li [
-                                    Html.a [
-                                        prop.href "https://fable.io"
-                                        prop.target "_blank"
-                                        prop.children [
-                                            Html.img [ prop.src "img/fable.png"; prop.width 40; prop.height 40 ]
-                                            Html.small " Powered by Fable"
-                                        ]
-                                    ]
-                                ]
-                                Html.li [
-                                    Html.a [
-                                        prop.href "https://github.com/fsharpforyou/tour"
-                                        prop.target "_blank"
-                                        prop.children [
-                                            Html.img [ prop.src "img/github.png"; prop.width 40; prop.height 40 ]
-                                            Html.small " View Source Code"
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
                 ]
             ]
         ]
