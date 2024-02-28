@@ -13,4 +13,4 @@ src/Standalone/
 public/metadata/
 public/js/repl/bundle.min.js
 public/js/repl/worker.min.js
-public/js/repl/fable-library/
+public/js/repl/fable-library-js/

@@ -8,9 +8,14 @@ open Fake.IO.Globbing.Operators
 
 module Directories =
     let sourceDir = __SOURCE_DIRECTORY__
-    let fableStandaloneNpmSrc = sourceDir </> "node_modules/fable-standalone/src"
-    let fableStandaloneNpmDist = sourceDir </> "node_modules/fable-standalone/dist"
-    let fableMetadataLib = sourceDir </> "node_modules/fable-metadata/lib/"
+
+    let fableStandaloneNpmSrc =
+        sourceDir </> "node_modules/@fable-org/fable-standalone/src"
+
+    let fableStandaloneNpmDist =
+        sourceDir </> "node_modules/@fable-org/fable-standalone/dist"
+
+    let fableMetadataLib = sourceDir </> "node_modules/@fable-org/fable-metadata/lib/"
     let publicReplOutput = sourceDir </> "public/js/repl"
     let fableStandaloneFSharp = sourceDir </> "src/Standalone"
     let publicMetadataOutput = sourceDir </> "public/metadata"

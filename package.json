@@ -4,9 +4,9 @@
     "bundle": "dotnet fable src/App --outDir dist/ --run vite build"
   },
   "dependencies": {
+    "@fable-org/fable-metadata": "^1.0.0",
+    "@fable-org/fable-standalone": "^1.1.0",
     "@monaco-editor/react": "^4.6.0",
-    "fable-metadata": "^2.2.0",
-    "fable-standalone": "^3.8.0",
     "monaco-editor": "^0.46.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
