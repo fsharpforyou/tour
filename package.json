@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "scripts": {
     "start": "dotnet fable watch src/App --verbose -o dist/ --run vite",
     "bundle": "dotnet fable src/App --outDir dist/ --run vite build"
