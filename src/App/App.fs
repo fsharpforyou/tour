@@ -292,8 +292,8 @@ let update msg model =
 let (|DesktopSize|MobileSize|) (screenSize: ScreenSize) =
     match screenSize with
     | ScreenSize.Desktop
-    | ScreenSize.WideScreen
-    | ScreenSize.Tablet -> DesktopSize // Tablets should be fine... but this may need to be changed in the future.
+    | ScreenSize.WideScreen -> DesktopSize
+    | ScreenSize.Tablet
     | ScreenSize.Mobile
     | ScreenSize.MobileLandscape -> MobileSize
 
