@@ -289,6 +289,54 @@ let update msg model =
         },
         debouncerCmd
 
+let (|DesktopSize|MobileSize|) (screenSize: ScreenSize) =
+    match screenSize with
+    | ScreenSize.Desktop
+    | ScreenSize.WideScreen
+    | ScreenSize.Tablet -> DesktopSize // Tablets should be fine... but this may need to be changed in the future.
+    | ScreenSize.Mobile
+    | ScreenSize.MobileLandscape -> MobileSize
+
+let mobileNavbar =
+    Html.ul [ Html.li [ Html.a [ prop.href (Router.format []); prop.text "F# For You" ] ] ]
+
+let desktopNavbar = [
+    Html.ul [
+        Html.li [
+            Html.a [
+                prop.href (Router.format [])
+                prop.children [
+                    Html.img [ prop.src "img/fsharp.png"; prop.width 40; prop.height 40 ]
+                    Html.strong " F# For You!"
+                ]
+            ]
+        ]
+    ]
+
+    Html.ul [
+        Html.li [
+            Html.a [
+                prop.href "https://fable.io"
+                prop.target "_blank"
+                prop.children [
+                    Html.img [ prop.src "img/fable.png"; prop.width 40; prop.height 40 ]
+                    Html.small " Powered by Fable"
+                ]
+            ]
+        ]
+        Html.li [
+            Html.a [
+                prop.href "https://github.com/fsharpforyou/tour"
+                prop.target "_blank"
+                prop.children [
+                    Html.img [ prop.src "img/github.png"; prop.width 40; prop.height 40 ]
+                    Html.small " View Source Code"
+                ]
+            ]
+        ]
+    ]
+]
+
 module View =
     [<ReactComponent>]
     let AppView () =
@@ -299,83 +347,40 @@ module View =
             router.onUrlChanged (SetUrl >> dispatch)
             router.children [
                 Html.header [
-                    prop.className "container-fluid"
+                    if screenSize = ScreenSize.Desktop || screenSize = ScreenSize.WideScreen then
+                        prop.className "container-fluid"
                     prop.style [ style.height (length.percent 10) ]
                     prop.children [
                         Html.nav [
                             match screenSize with
-                            | ScreenSize.Mobile
-                            | ScreenSize.MobileLandscape
-                            | ScreenSize.Tablet ->
-                                Html.ul [ Html.li [ Html.a [ prop.href (Router.format []); prop.text "F# For You" ] ] ]
-
-                            | ScreenSize.Desktop
-                            | ScreenSize.WideScreen ->
-                                Html.ul [
-                                    Html.li [
-                                        Html.a [
-                                            prop.href (Router.format [])
-                                            prop.children [
-                                                Html.img [ prop.src "img/fsharp.png"; prop.width 40; prop.height 40 ]
-                                                Html.strong " F# For You!"
-                                            ]
-                                        ]
-                                    ]
-                                ]
-
-                                Html.ul [
-                                    Html.li [
-                                        Html.a [
-                                            prop.href "https://fable.io"
-                                            prop.target "_blank"
-                                            prop.children [
-                                                Html.img [ prop.src "img/fable.png"; prop.width 40; prop.height 40 ]
-                                                Html.small " Powered by Fable"
-                                            ]
-                                        ]
-                                    ]
-                                    Html.li [
-                                        Html.a [
-                                            prop.href "https://github.com/fsharpforyou/tour"
-                                            prop.target "_blank"
-                                            prop.children [
-                                                Html.img [ prop.src "img/github.png"; prop.width 40; prop.height 40 ]
-                                                Html.small " View Source Code"
-                                            ]
-                                        ]
-                                    ]
-                                ]
+                            | MobileSize -> mobileNavbar
+                            | DesktopSize -> yield! desktopNavbar
 
                             Html.ul [ Html.button [ prop.text "Run"; prop.onClick (fun _ -> dispatch Compile) ] ]
                         ]
                     ]
                 ]
                 Html.main [
-                    prop.className "container-fluid"
                     prop.style [
                         style.display.flex
 
                         match screenSize with
-                        | ScreenSize.Desktop
-                        | ScreenSize.WideScreen ->
+                        | DesktopSize ->
                             style.height (length.percent 90)
                             style.flexDirection.row
-                        | ScreenSize.Mobile
-                        | ScreenSize.MobileLandscape
-                        | ScreenSize.Tablet -> style.flexDirection.column
+                        | MobileSize ->
+                            style.height (length.percent 100)
+                            style.flexDirection.column
                     ]
                     prop.children [
                         Html.section [
                             prop.style [
                                 match screenSize with
-                                | ScreenSize.Desktop
-                                | ScreenSize.WideScreen -> style.width (length.percent 50)
-                                | ScreenSize.Mobile
-                                | ScreenSize.MobileLandscape
-                                | ScreenSize.Tablet -> style.width (length.percent 100)
-
-                                style.overflow.scroll
-                                style.overflowX.hidden
+                                | MobileSize -> style.width (length.percent 100)
+                                | DesktopSize ->
+                                    style.overflow.scroll
+                                    style.overflowX.hidden
+                                    style.width (length.percent 50)
                             ]
                             prop.children [
                                 Markdown.markdown [
@@ -431,11 +436,8 @@ module View =
                         Html.section [
                             prop.style [
                                 match screenSize with
-                                | ScreenSize.Desktop
-                                | ScreenSize.WideScreen -> style.width (length.percent 50)
-                                | ScreenSize.Mobile
-                                | ScreenSize.MobileLandscape
-                                | ScreenSize.Tablet -> style.width (length.percent 100)
+                                | DesktopSize -> style.width (length.percent 50)
+                                | MobileSize -> style.width (length.percent 100)
                             ]
                             prop.children [
                                 Html.section [
