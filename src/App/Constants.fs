@@ -9,6 +9,6 @@ let host =
 
 let worker = host + "js/repl/worker.min.js"
 let metadata = host + "metadata"
-let fableLibrary = host + "js/repl/fable-library-js"
+let fableLibrary = host + "js/repl/fable-library"
 let documentation = host + "documentation/"
 let tableOfContents = documentation + "table-of-contents.json"
