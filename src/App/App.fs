@@ -357,7 +357,9 @@ module View =
 
                         match screenSize with
                         | ScreenSize.Desktop
-                        | ScreenSize.WideScreen -> style.flexDirection.row
+                        | ScreenSize.WideScreen ->
+                            style.height (length.percent 90)
+                            style.flexDirection.row
                         | ScreenSize.Mobile
                         | ScreenSize.MobileLandscape
                         | ScreenSize.Tablet -> style.flexDirection.column
