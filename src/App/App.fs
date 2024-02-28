@@ -13,6 +13,7 @@ open Feliz.Markdown
 open Navigation
 open MonacoEditor
 open System
+open Feliz.UseMediaQuery
 
 importSideEffects "react-toastify/dist/ReactToastify.css"
 importSideEffects "./monaco-vite.js"
@@ -292,58 +293,85 @@ module View =
     [<ReactComponent>]
     let AppView () =
         let model, dispatch = React.useElmish (init, update)
+        let screenSize = React.useResponsive Breakpoints.defaults
 
         React.router [
             router.onUrlChanged (SetUrl >> dispatch)
             router.children [
                 Html.header [
+                    prop.className "container-fluid"
                     prop.style [ style.height (length.percent 10) ]
                     prop.children [
                         Html.nav [
-                            Html.ul [
-                                Html.li [
-                                    Html.a [
-                                        prop.href (Router.format [])
-                                        prop.children [
-                                            Html.img [ prop.src "img/fsharp.png"; prop.width 40; prop.height 40 ]
-                                            Html.strong " F# For You!"
+                            match screenSize with
+                            | ScreenSize.Mobile
+                            | ScreenSize.MobileLandscape
+                            | ScreenSize.Tablet ->
+                                Html.ul [ Html.li [ Html.a [ prop.href (Router.format []); prop.text "F# For You" ] ] ]
+
+                            | ScreenSize.Desktop
+                            | ScreenSize.WideScreen ->
+                                Html.ul [
+                                    Html.li [
+                                        Html.a [
+                                            prop.href (Router.format [])
+                                            prop.children [
+                                                Html.img [ prop.src "img/fsharp.png"; prop.width 40; prop.height 40 ]
+                                                Html.strong " F# For You!"
+                                            ]
                                         ]
                                     ]
                                 ]
-                            ]
-                            Html.ul [
-                                Html.li [
-                                    Html.a [
-                                        prop.href "https://fable.io"
-                                        prop.target "_blank"
-                                        prop.children [
-                                            Html.img [ prop.src "img/fable.png"; prop.width 40; prop.height 40 ]
-                                            Html.small " Powered by Fable"
+
+                                Html.ul [
+                                    Html.li [
+                                        Html.a [
+                                            prop.href "https://fable.io"
+                                            prop.target "_blank"
+                                            prop.children [
+                                                Html.img [ prop.src "img/fable.png"; prop.width 40; prop.height 40 ]
+                                                Html.small " Powered by Fable"
+                                            ]
+                                        ]
+                                    ]
+                                    Html.li [
+                                        Html.a [
+                                            prop.href "https://github.com/fsharpforyou/tour"
+                                            prop.target "_blank"
+                                            prop.children [
+                                                Html.img [ prop.src "img/github.png"; prop.width 40; prop.height 40 ]
+                                                Html.small " View Source Code"
+                                            ]
                                         ]
                                     ]
                                 ]
-                                Html.li [
-                                    Html.a [
-                                        prop.href "https://github.com/fsharpforyou/tour"
-                                        prop.target "_blank"
-                                        prop.children [
-                                            Html.img [ prop.src "img/github.png"; prop.width 40; prop.height 40 ]
-                                            Html.small " View Source Code"
-                                        ]
-                                    ]
-                                ]
-                            ]
+
                             Html.ul [ Html.button [ prop.text "Run"; prop.onClick (fun _ -> dispatch Compile) ] ]
                         ]
                     ]
                 ]
                 Html.main [
-                    prop.role "group"
-                    prop.style [ style.height (length.percent 90) ]
+                    prop.className "container-fluid"
+                    prop.style [
+                        style.display.flex
+
+                        match screenSize with
+                        | ScreenSize.Desktop
+                        | ScreenSize.WideScreen -> style.flexDirection.row
+                        | ScreenSize.Mobile
+                        | ScreenSize.MobileLandscape
+                        | ScreenSize.Tablet -> style.flexDirection.column
+                    ]
                     prop.children [
                         Html.section [
                             prop.style [
-                                style.width (length.percent 50)
+                                match screenSize with
+                                | ScreenSize.Desktop
+                                | ScreenSize.WideScreen -> style.width (length.percent 50)
+                                | ScreenSize.Mobile
+                                | ScreenSize.MobileLandscape
+                                | ScreenSize.Tablet -> style.width (length.percent 100)
+
                                 style.overflow.scroll
                                 style.overflowX.hidden
                             ]
@@ -370,36 +398,43 @@ module View =
 
                                 Html.nav [
                                     Html.ul [
-                                        Html.li [
-                                            match model.DocEntryNavigation.PreviousEntry with
-                                            | None -> Html.none
-                                            | Some entry ->
+                                        match model.DocEntryNavigation.PreviousEntry with
+                                        | None -> Html.none
+                                        | Some entry ->
+                                            Html.li [
                                                 Html.a [
                                                     prop.href (Router.format entry.Route)
                                                     prop.text $"< {entry.Title}"
                                                 ]
-                                        ]
+                                            ]
                                         Html.li [
                                             Html.a [
                                                 prop.href (Router.format [ "table-of-contents" ])
                                                 prop.text "Table of Contents"
                                             ]
                                         ]
-                                        Html.li [
-                                            match model.DocEntryNavigation.NextEntry with
-                                            | None -> Html.none
-                                            | Some entry ->
+                                        match model.DocEntryNavigation.NextEntry with
+                                        | None -> Html.none
+                                        | Some entry ->
+                                            Html.li [
                                                 Html.a [
                                                     prop.href (Router.format entry.Route)
                                                     prop.text $"{entry.Title} >"
                                                 ]
-                                        ]
+                                            ]
                                     ]
                                 ]
                             ]
                         ]
                         Html.section [
-                            prop.style [ style.width (length.percent 50) ]
+                            prop.style [
+                                match screenSize with
+                                | ScreenSize.Desktop
+                                | ScreenSize.WideScreen -> style.width (length.percent 50)
+                                | ScreenSize.Mobile
+                                | ScreenSize.MobileLandscape
+                                | ScreenSize.Tablet -> style.width (length.percent 100)
+                            ]
                             prop.children [
                                 Html.section [
                                     prop.style [ style.height (length.percent 70) ]
