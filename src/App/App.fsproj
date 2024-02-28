@@ -25,6 +25,7 @@
     <PackageReference Include="Feliz.Markdown" Version="2.4.0" />
     <PackageReference Include="Feliz.Router" Version="4.0.0" />
     <PackageReference Include="Feliz.UseElmish" Version="2.5.0" />
+    <PackageReference Include="Feliz.UseMediaQuery" Version="1.5.0" />
     <PackageReference Include="Thoth.Elmish.Debouncer" Version="2.1.0" />
     <PackageReference Include="Thoth.Json" Version="10.2.0" />
   </ItemGroup>
