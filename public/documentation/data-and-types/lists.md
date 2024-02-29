@@ -43,3 +43,15 @@ match numbers with
 ```
 
 The `head :: tail` pattern will deconstruct the list `[1; 2; 3]` into `head = 1` and `tail = [2; 3]`. This can also be done for N number of elements: `first :: second :: tail`. The `head :: tail` pattern will match against any list with a single element.
+
+The `List` module contains common functions for operating with lists. These functions include: `map` and `filter`. The `map` function applies a transformation function to each element in a list and the `filter` function will remove elements from a list.
+
+```fs
+let isEven x = x % 2 = 0
+let numbers = [0; 1; 2; 3; 4; 5;]
+
+let evenNumbersAsStrings =
+    numbers // [0; 1; 2; 3; 4; 5;]
+    |> List.filter isEven // [0; 2; 4]
+    |> List.map string // ["0"; "2"; "4"]
+```
