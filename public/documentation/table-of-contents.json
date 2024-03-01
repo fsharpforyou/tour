@@ -18,6 +18,12 @@
                     "markdown_file": "functions/functions-as-values.md"
                 },
                 {
+                    "title": "Recursive Functions",
+                    "route_segment": "recursive-functions",
+                    "fsharp_file": "functions/recursive-functions.fsx",
+                    "markdown_file": "functions/recursive-functions.md"
+                },
+                {
                     "title": "Currying and Partial Application",
                     "route_segment": "currying-and-partial-application",
                     "fsharp_file": "functions/currying-and-partial-application.fsx",
