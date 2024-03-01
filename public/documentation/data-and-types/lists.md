@@ -46,7 +46,7 @@ The `head :: tail` pattern will deconstruct the list `[1; 2; 3]` into `head = 1`
 
 The `List` module contains common functions for operating with lists. These functions include: `map` and `filter`. The `map` function applies a transformation function to each element in a list and the `filter` function will remove elements from a list.
 
-```fs
+```fsharp
 let isEven x = x % 2 = 0
 let numbers = [0; 1; 2; 3; 4; 5;]
 
