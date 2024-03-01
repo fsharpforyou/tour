@@ -30,6 +30,78 @@
                     "markdown_file": "functions/pipelines-and-composition.md"
                 }
             ]
+        },
+        {
+            "title": "Data and Types",
+            "route_segment": "data-and-types",
+            "pages": [
+                {
+                    "title": "Tuples",
+                    "route_segment": "tuples",
+                    "fsharp_file": "data-and-types/tuples.fsx",
+                    "markdown_file": "data-and-types/tuples.md"
+                },
+                {
+                    "title": "Lists",
+                    "route_segment": "lists",
+                    "fsharp_file": "data-and-types/lists.fsx",
+                    "markdown_file": "data-and-types/lists.md"
+                },
+                {
+                    "title": "Sequences",
+                    "route_segment": "sequences",
+                    "fsharp_file": "data-and-types/sequences.fsx",
+                    "markdown_file": "data-and-types/sequences.md"
+                },
+                {
+                    "title": "Sequence Expressions",
+                    "route_segment": "sequence-expressions",
+                    "fsharp_file": "data-and-types/sequence-expressions.fsx",
+                    "markdown_file": "data-and-types/sequence-expressions.md"
+                },
+                {
+                    "title": "Type Abbreviations",
+                    "route_segment": "abbreviations",
+                    "fsharp_file": "data-and-types/abbreviations.fsx",
+                    "markdown_file": "data-and-types/abbreviations.md"
+                },
+                {
+                    "title": "Records",
+                    "route_segment": "records",
+                    "fsharp_file": "data-and-types/records.fsx",
+                    "markdown_file": "data-and-types/records.md"
+                },
+                {
+                    "title": "Discriminated Unions",
+                    "route_segment": "discriminated-unions",
+                    "fsharp_file": "data-and-types/discriminated-unions.fsx",
+                    "markdown_file": "data-and-types/discriminated-unions.md"
+                },
+                {
+                    "title": "Generic Types",
+                    "route_segment": "generic-types",
+                    "fsharp_file": "data-and-types/generic-types.fsx",
+                    "markdown_file": "data-and-types/generic-types.md"
+                },
+                {
+                    "title": "The Option Type",
+                    "route_segment": "options",
+                    "fsharp_file": "data-and-types/the-option-type.fsx",
+                    "markdown_file": "data-and-types/the-option-type.md"
+                },
+                {
+                    "title": "The Result Type",
+                    "route_segment": "results",
+                    "fsharp_file": "data-and-types/the-result-type.fsx",
+                    "markdown_file": "data-and-types/the-result-type.md"
+                },
+                {
+                    "title": "Units of Measure",
+                    "route_segment": "units-of-measure",
+                    "fsharp_file": "data-and-types/units-of-measure.fsx",
+                    "markdown_file": "data-and-types/units-of-measure.md"
+                }
+            ]
         }
     ]
 }
