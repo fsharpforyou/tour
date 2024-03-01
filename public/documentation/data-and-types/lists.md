@@ -42,9 +42,23 @@ match numbers with
 | head :: tail -> $"Head: {head}, Tail: {tail}"
 ```
 
-The `head :: tail` pattern will deconstruct the list `[1; 2; 3]` into `head = 1` and `tail = [2; 3]`. This can also be done for N number of elements: `first :: second :: tail`. The `head :: tail` pattern will match against any list with a single element.
+The `head :: tail` pattern will deconstruct the list `[1; 2; 3]` into `head = 1` and `tail = [2; 3]`. This can also be done for N number of elements: `first :: second :: tail`. The `head :: tail` pattern will match against any list with a single element. While the `first :: second :: tail` pattern will match against any list with at least two elements, and so on.
 
-The `List` module contains common functions for operating with lists. These functions include: `map` and `filter`. The `map` function applies a transformation function to each element in a list and the `filter` function will remove elements from a list.
+The _cons_ pattern is often used in recursive functions. Using the _cons_ pattern we can process the first element in a list, transforming it, then passing the tail of the list back into the recursive function to continue.
+
+```fsharp
+let rec iter (f: 'a -> unit) (xs: 'a list) =
+    match xs with
+    | [] -> ()
+    | x :: xs ->
+        f x
+        iter f xs
+```
+
+The `List` module contains common functions for operating with lists. These functions include but are not limited to:
+* `map` which applies a transformation function to every element in a list.
+* `filter` which removes elements from a list.
+* `iter` which applies an `'a -> unit` function to each element in a list and returns `unit`.
 
 ```fsharp
 let isEven x = x % 2 = 0
@@ -54,4 +68,5 @@ let evenNumbersAsStrings =
     numbers // [0; 1; 2; 3; 4; 5;]
     |> List.filter isEven // [0; 2; 4]
     |> List.map string // ["0"; "2"; "4"]
+    |> List.iter (printfn "%s")
 ```
