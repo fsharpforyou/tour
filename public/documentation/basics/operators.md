@@ -10,7 +10,7 @@ let four = 8 - 4 // subtract two numbers.
 let five = 10 / 2 // divide two numbers.
 let twenty = 10 * 2 // multiply two numbers.
 let remainder = 10 % 2 // remainder after division.
-let squared = 10 ** 2 // 10 to the power of 2
+let squared = 10.0 ** 2.0 // 10 to the power of 2
 ```
 
 The comparison operators include: `=`, `<>`, `>`, `<`, `>=`, `<=`. These operators compare two values and return a boolean result: `true` or `false`.
