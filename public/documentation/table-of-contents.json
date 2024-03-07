@@ -2,6 +2,54 @@
     "root": "cover.md",
     "categories": [
         {
+            "title": "Basics",
+            "route_segment": "basics",
+            "pages": [
+                {
+                    "title": "Hello, World!",
+                    "route_segment": "hello-world",
+                    "fsharp_file": "basics/hello-world.fsx",
+                    "markdown_file": "basics/hello-world.md"
+                },
+                {
+                    "title": "Expressions",
+                    "route_segment": "expressions",
+                    "fsharp_file": "basics/expressions.fsx",
+                    "markdown_file": "basics/expressions.md"
+                },
+                {
+                    "title": "Primitive Types",
+                    "route_segment": "primitive-types",
+                    "fsharp_file": "basics/primitive-types.fsx",
+                    "markdown_file": "basics/primitive-types.md"
+                },
+                {
+                    "title": "String Formatting",
+                    "route_segment": "string-formatting",
+                    "fsharp_file": "basics/string-formatting.fsx",
+                    "markdown_file": "basics/string-formatting.md"
+                },
+                {
+                    "title": "Operators",
+                    "route_segment": "operators",
+                    "fsharp_file": "basics/operators.fsx",
+                    "markdown_file": "basics/operators.md"
+                },
+                {
+                    "title": "Conditional Expressions",
+                    "route_segment": "conditional-expressions",
+                    "fsharp_file": "basics/conditional-expressions.fsx",
+                    "markdown_file": "basics/conditional-expressions.md"
+                },
+                {
+                    "title": "Patterns and Match Expressions",
+                    "route_segment": "pattern-matching",
+                    "fsharp_file": "basics/patterns-and-match-expressions.fsx",
+                    "markdown_file": "basics/patterns-and-match-expressions.md"
+                }
+            ]
+        },
+        {
             "title": "Functions",
             "route_segment": "functions",
             "pages": [
