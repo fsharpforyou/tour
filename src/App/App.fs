@@ -189,6 +189,10 @@ let toastNotificationFromErrors (errors: Error array) =
     | [||] -> Toastify.success "Compiled Successfully."
     | _ -> Toastify.error "Failed to Compile."
 
+let scrollToTopOfMarkdown () =
+    let markdownElement = document.getElementById "markdown-content"
+    markdownElement.scrollTo (0, 0)
+
 let update msg model =
     match msg with
     | Compile -> { model with Logs = [] }, Cmd.ofEffect (fun _ -> compile model)
@@ -266,7 +270,11 @@ let update msg model =
         // clear the logs when we calculate new values.
         { model with Logs = [] },
         // this has useful side-effects like triggering an initial parse through the `SetFSharpCode` msg.
-        Cmd.batch [ Cmd.ofMsg (SetFSharpCode fsharpCode); Cmd.ofMsg (SetMarkdown markdown) ]
+        Cmd.batch [
+            Cmd.ofMsg (SetFSharpCode fsharpCode)
+            Cmd.ofMsg (SetMarkdown markdown)
+            Cmd.ofEffect (fun _ -> scrollToTopOfMarkdown ())
+        ]
     | CalculateDocEntryNavigation ->
         let allEntries = Documentation.TableOfContents.allPages model.TableOfContents
 
@@ -374,6 +382,7 @@ module View =
                     ]
                     prop.children [
                         Html.section [
+                            prop.id "markdown-content"
                             prop.style [
                                 match screenSize with
                                 | MobileSize -> style.width (length.percent 100)
