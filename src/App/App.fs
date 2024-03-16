@@ -384,11 +384,12 @@ module View =
                         Html.section [
                             prop.id "markdown-content"
                             prop.style [
+                                style.custom ("text-wrap", "balance")
+
                                 match screenSize with
                                 | MobileSize -> style.width (length.percent 100)
                                 | DesktopSize ->
                                     style.overflow.scroll
-                                    style.overflowX.hidden
                                     style.width (length.percent 50)
                             ]
                             prop.children [
