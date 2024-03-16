@@ -156,6 +156,42 @@
                     "markdown_file": "data-and-types/units-of-measure.md"
                 }
             ]
+        },
+        {
+            "title": "Object Programming",
+            "route_segment": "object-programming",
+            "pages": [
+                {
+                    "title": "Objects and Members",
+                    "route_segment": "objects-and-members",
+                    "fsharp_file": "object-programming/objects-and-members.fsx",
+                    "markdown_file": "object-programming/objects-and-members.md"
+                },
+                {
+                    "title": "Interfaces",
+                    "route_segment": "interfaces",
+                    "fsharp_file": "object-programming/interfaces.fsx",
+                    "markdown_file": "object-programming/interfaces.md"
+                },
+                {
+                    "title": "Abstract Classes and Inheritance",
+                    "route_segment": "abstract-classes-and-inheritance",
+                    "fsharp_file": "object-programming/abstract-classes-and-inheritance.fsx",
+                    "markdown_file": "object-programming/abstract-classes-and-inheritance.md"
+                },
+                {
+                    "title": "Object Expressions",
+                    "route_segment": "object-expressions",
+                    "fsharp_file": "object-programming/object-expressions.fsx",
+                    "markdown_file": "object-programming/object-expressions.md"
+                },
+                {
+                    "title": "Type Extensions",
+                    "route_segment": "type-extensions",
+                    "fsharp_file": "object-programming/type-extensions.fsx",
+                    "markdown_file": "object-programming/type-extensions.md"
+                }
+            ]
         }
     ]
 }
