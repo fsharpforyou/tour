@@ -1,4 +1,4 @@
-open Feliz
+﻿open Feliz
 open Feliz.UseElmish
 open Feliz.Router
 open Thoth.Elmish
@@ -308,39 +308,28 @@ let (|DesktopSize|MobileSize|) (screenSize: ScreenSize) =
 let mobileNavbar =
     Html.ul [ Html.li [ Html.a [ prop.href (Router.format []); prop.text "F# For You" ] ] ]
 
-let desktopNavbar = [
-    Html.ul [
-        Html.li [
-            Html.a [
-                prop.href (Router.format [])
-                prop.children [
-                    Html.img [ prop.src "img/fsharp.png"; prop.width 40; prop.height 40 ]
-                    Html.strong " F# For You!"
-                ]
+let imageLink href src text =
+    Html.a [
+        prop.href href
+        prop.target "_blank"
+        prop.children [
+            Html.img [
+                prop.src src
+                prop.width 40
+                prop.height 40
+                prop.style [ style.marginRight (length.px 5) ]
             ]
+            Html.small (text: string)
         ]
     ]
 
+let desktopNavbar = [
+    Html.ul [ Html.li [ imageLink (Router.format []) "img/fsharp.png" "F# For You!" ] ]
+
     Html.ul [
+        Html.li [ imageLink "https://fable.io" "img/fable.png" "Powered by Fable" ]
         Html.li [
-            Html.a [
-                prop.href "https://fable.io"
-                prop.target "_blank"
-                prop.children [
-                    Html.img [ prop.src "img/fable.png"; prop.width 40; prop.height 40 ]
-                    Html.small " Powered by Fable"
-                ]
-            ]
-        ]
-        Html.li [
-            Html.a [
-                prop.href "https://github.com/fsharpforyou/tour"
-                prop.target "_blank"
-                prop.children [
-                    Html.img [ prop.src "img/github.png"; prop.width 40; prop.height 40 ]
-                    Html.small " View Source Code"
-                ]
-            ]
+            imageLink "https://github.com/fsharpforyou/tour" "img/github.png" "View Source Code"
         ]
     ]
 ]
