@@ -1,4 +1,4 @@
-﻿open Feliz
+open Feliz
 open Feliz.UseElmish
 open Feliz.Router
 open Thoth.Elmish
@@ -385,6 +385,7 @@ module View =
                             prop.id "markdown-content"
                             prop.style [
                                 style.custom ("text-wrap", "balance")
+                                style.overflowX.hidden
 
                                 match screenSize with
                                 | MobileSize -> style.width (length.percent 100)
