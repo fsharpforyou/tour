@@ -67,11 +67,11 @@ type AdultUser = { Name: string }
 
 let userToAdultUser (user: User) : AdultUser option =
     if user.Age >= 18
-    then { AdultUser.Name = user.Name }
+    then Some { AdultUser.Name = user.Name }
     else None
 
 let getAdultUser userId users =
     users
-    |> tryFindUserById 1
+    |> tryFindUserById userId
     |> Option.bind userToAdultUser
 ```
