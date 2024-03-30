@@ -308,39 +308,28 @@ let (|DesktopSize|MobileSize|) (screenSize: ScreenSize) =
 let mobileNavbar =
     Html.ul [ Html.li [ Html.a [ prop.href (Router.format []); prop.text "F# For You" ] ] ]
 
-let desktopNavbar = [
-    Html.ul [
-        Html.li [
-            Html.a [
-                prop.href (Router.format [])
-                prop.children [
-                    Html.img [ prop.src "img/fsharp.png"; prop.width 40; prop.height 40 ]
-                    Html.strong " F# For You!"
-                ]
+let imageLink href src text =
+    Html.a [
+        prop.href href
+        prop.target "_blank"
+        prop.children [
+            Html.img [
+                prop.src src
+                prop.width 40
+                prop.height 40
+                prop.style [ style.marginRight (length.px 5) ]
             ]
+            Html.small (text: string)
         ]
     ]
 
+let desktopNavbar = [
+    Html.ul [ Html.li [ imageLink (Router.format []) "img/fsharp.png" "F# For You!" ] ]
+
     Html.ul [
+        Html.li [ imageLink "https://fable.io" "img/fable.png" "Powered by Fable" ]
         Html.li [
-            Html.a [
-                prop.href "https://fable.io"
-                prop.target "_blank"
-                prop.children [
-                    Html.img [ prop.src "img/fable.png"; prop.width 40; prop.height 40 ]
-                    Html.small " Powered by Fable"
-                ]
-            ]
-        ]
-        Html.li [
-            Html.a [
-                prop.href "https://github.com/fsharpforyou/tour"
-                prop.target "_blank"
-                prop.children [
-                    Html.img [ prop.src "img/github.png"; prop.width 40; prop.height 40 ]
-                    Html.small " View Source Code"
-                ]
-            ]
+            imageLink "https://github.com/fsharpforyou/tour" "img/github.png" "View Source Code"
         ]
     ]
 ]
@@ -354,43 +343,42 @@ module View =
         React.router [
             router.onUrlChanged (SetUrl >> dispatch)
             router.children [
-                Html.header [
-                    if screenSize = ScreenSize.Desktop || screenSize = ScreenSize.WideScreen then
-                        prop.className "container-fluid"
-                    prop.style [ style.height (length.percent 10) ]
-                    prop.children [
-                        Html.nav [
-                            match screenSize with
-                            | MobileSize -> mobileNavbar
-                            | DesktopSize -> yield! desktopNavbar
-
-                            Html.ul [ Html.button [ prop.text "Run"; prop.onClick (fun _ -> dispatch Compile) ] ]
-                        ]
-                    ]
-                ]
                 Html.main [
                     prop.style [
-                        style.display.flex
+                        style.display.grid
 
                         match screenSize with
-                        | DesktopSize ->
-                            style.height (length.percent 90)
-                            style.flexDirection.row
                         | MobileSize ->
+                            style.gridTemplateAreas [| [| "header" |]; [| "markdown" |]; [| "editor" |] |]
+                            style.gridTemplateRows [| length.percent 10; length.auto; length.px 750 |]
+                            style.gridTemplateColumns [| length.percent 100 |]
+                        | DesktopSize ->
                             style.height (length.percent 100)
-                            style.flexDirection.column
+                            style.gridTemplateAreas [| [| "header"; "header" |]; [| "markdown"; "editor" |] |]
+                            style.gridTemplateRows [| length.percent 10; length.percent 90 |]
+                            style.gridTemplateColumns [| length.percent 50; length.percent 50 |]
                     ]
                     prop.children [
+                        Html.header [
+                            prop.style [ style.gridArea "header" ]
+                            prop.children [
+                                Html.nav [
+                                    match screenSize with
+                                    | MobileSize -> mobileNavbar
+                                    | DesktopSize -> yield! desktopNavbar
+
+                                    Html.ul [
+                                        Html.button [ prop.text "Run"; prop.onClick (fun _ -> dispatch Compile) ]
+                                    ]
+                                ]
+                            ]
+                        ]
                         Html.section [
                             prop.id "markdown-content"
                             prop.style [
+                                style.gridArea "markdown"
                                 style.custom ("text-wrap", "balance")
-
-                                match screenSize with
-                                | MobileSize -> style.width (length.percent 100)
-                                | DesktopSize ->
-                                    style.overflow.scroll
-                                    style.width (length.percent 50)
+                                style.overflowX.hidden
                             ]
                             prop.children [
                                 Markdown.markdown [
@@ -444,11 +432,7 @@ module View =
                             ]
                         ]
                         Html.section [
-                            prop.style [
-                                match screenSize with
-                                | DesktopSize -> style.width (length.percent 50)
-                                | MobileSize -> style.width (length.percent 100)
-                            ]
+                            prop.style [ style.gridArea "editor" ]
                             prop.children [
                                 Html.section [
                                     prop.style [ style.height (length.percent 70) ]
@@ -465,11 +449,7 @@ module View =
                                     ]
                                 ]
                                 Html.article [
-                                    prop.style [
-                                        style.height (length.percent 30)
-                                        style.overflow.scroll
-                                        style.overflowX.hidden
-                                    ]
+                                    prop.style [ style.height (length.percent 30); style.overflow.scroll ]
                                     prop.children [
                                         Html.h4 "Output"
                                         for (log, level) in model.Logs do
