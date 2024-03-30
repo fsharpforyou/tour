@@ -343,44 +343,42 @@ module View =
         React.router [
             router.onUrlChanged (SetUrl >> dispatch)
             router.children [
-                Html.header [
-                    if screenSize = ScreenSize.Desktop || screenSize = ScreenSize.WideScreen then
-                        prop.className "container-fluid"
-                    prop.style [ style.height (length.percent 10) ]
-                    prop.children [
-                        Html.nav [
-                            match screenSize with
-                            | MobileSize -> mobileNavbar
-                            | DesktopSize -> yield! desktopNavbar
-
-                            Html.ul [ Html.button [ prop.text "Run"; prop.onClick (fun _ -> dispatch Compile) ] ]
-                        ]
-                    ]
-                ]
                 Html.main [
                     prop.style [
-                        style.display.flex
+                        style.display.grid
 
                         match screenSize with
-                        | DesktopSize ->
-                            style.height (length.percent 90)
-                            style.flexDirection.row
                         | MobileSize ->
+                            style.gridTemplateAreas [| [| "header" |]; [| "markdown" |]; [| "editor" |] |]
+                            style.gridTemplateRows [| length.percent 10; length.auto; length.px 750 |]
+                            style.gridTemplateColumns [| length.percent 100 |]
+                        | DesktopSize ->
                             style.height (length.percent 100)
-                            style.flexDirection.column
+                            style.gridTemplateAreas [| [| "header"; "header" |]; [| "markdown"; "editor" |] |]
+                            style.gridTemplateRows [| length.percent 10; length.percent 90 |]
+                            style.gridTemplateColumns [| length.percent 50; length.percent 50 |]
                     ]
                     prop.children [
+                        Html.header [
+                            prop.style [ style.gridArea "header" ]
+                            prop.children [
+                                Html.nav [
+                                    match screenSize with
+                                    | MobileSize -> mobileNavbar
+                                    | DesktopSize -> yield! desktopNavbar
+
+                                    Html.ul [
+                                        Html.button [ prop.text "Run"; prop.onClick (fun _ -> dispatch Compile) ]
+                                    ]
+                                ]
+                            ]
+                        ]
                         Html.section [
                             prop.id "markdown-content"
                             prop.style [
+                                style.gridArea "markdown"
                                 style.custom ("text-wrap", "balance")
                                 style.overflowX.hidden
-
-                                match screenSize with
-                                | MobileSize -> style.width (length.percent 100)
-                                | DesktopSize ->
-                                    style.overflow.scroll
-                                    style.width (length.percent 50)
                             ]
                             prop.children [
                                 Markdown.markdown [
@@ -434,11 +432,7 @@ module View =
                             ]
                         ]
                         Html.section [
-                            prop.style [
-                                match screenSize with
-                                | DesktopSize -> style.width (length.percent 50)
-                                | MobileSize -> style.width (length.percent 100)
-                            ]
+                            prop.style [ style.gridArea "editor" ]
                             prop.children [
                                 Html.section [
                                     prop.style [ style.height (length.percent 70) ]
@@ -455,11 +449,7 @@ module View =
                                     ]
                                 ]
                                 Html.article [
-                                    prop.style [
-                                        style.height (length.percent 30)
-                                        style.overflow.scroll
-                                        style.overflowX.hidden
-                                    ]
+                                    prop.style [ style.height (length.percent 30); style.overflow.scroll ]
                                     prop.children [
                                         Html.h4 "Output"
                                         for (log, level) in model.Logs do
