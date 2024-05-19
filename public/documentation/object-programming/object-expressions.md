@@ -26,6 +26,7 @@ type IDrawable =
 type Square() =
     interface IShape with
         member this.Kind = "square"
+
     interface IDrawable with
         member this.Draw(x: float, y: float) =
             printfn $"Drawing a square @ X: {x}, Y: {y}"
