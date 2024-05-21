@@ -4,7 +4,7 @@ An object expression allows us to create an anonymous object from an existing ba
 
 ```fsharp
 type IDrawable =
-    abstract member Draw : float * float -> unit 
+    abstract member Draw : float * float -> unit
 
 let square =
     { new IDrawable with
@@ -23,15 +23,17 @@ type IShape =
 type IDrawable =
     abstract member Draw : float * float -> unit
 
-let square =
-    { new IShape with
+type Square() =
+    interface IShape with
         member this.Kind = "square"
-        
-      new IDrawable with
-        member this.Draw(x: float, y: float) =
-            printfn $"Drawing a square @ X: {x}, Y: {y}" }
 
-square.Kind // "square"
+    interface IDrawable with
+        member this.Draw(x: float, y: float) =
+            printfn $"Drawing a square @ X: {x}, Y: {y}"
+
+let square = Square ()
+
+(square :> IShape).Kind // "square"
 (square :> IDrawable).Draw(0.0, 0.0) // "Drawing a square @ X: 0.0, Y: 0.0"
 ```
 
