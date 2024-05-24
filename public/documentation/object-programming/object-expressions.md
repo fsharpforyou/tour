@@ -23,11 +23,14 @@ type IShape =
 type IDrawable =
     abstract member Draw : float * float -> unit
 
+type ISquare =
+  inherit IShape
+  inherit IDrawable
+
 let square =
-    { new IShape with
+    { new ISquare with
         member this.Kind = "square"
-        
-      new IDrawable with
+
         member this.Draw(x: float, y: float) =
             printfn $"Drawing a square @ X: {x}, Y: {y}" }
 
