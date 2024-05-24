@@ -35,7 +35,7 @@ let square =
             printfn $"Drawing a square @ X: {x}, Y: {y}" }
 
 square.Kind // "square"
-(square :> IDrawable).Draw(0.0, 0.0) // "Drawing a square @ X: 0.0, Y: 0.0"
+square.Draw(0.0, 0.0) // "Drawing a square @ X: 0.0, Y: 0.0"
 ```
 
-Notice that the type of `square` is an `IShape` as that's what its created as when using `new IShape with`. It just so happens that it also implements the `IDrawable` interface and casting is required to convert it to an `IDrawable`
+Notice that the type of `square` is an `ISquare` as that's what it's created as when using `new ISquare with`.
