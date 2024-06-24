@@ -8,43 +8,36 @@
                 {
                     "title": "Hello, World!",
                     "route_segment": "hello-world",
-                    "fsharp_file": "basics/hello-world.fsx",
                     "markdown_file": "basics/hello-world.md"
                 },
                 {
                     "title": "Expressions",
                     "route_segment": "expressions",
-                    "fsharp_file": "basics/expressions.fsx",
                     "markdown_file": "basics/expressions.md"
                 },
                 {
                     "title": "Primitive Types",
                     "route_segment": "primitive-types",
-                    "fsharp_file": "basics/primitive-types.fsx",
                     "markdown_file": "basics/primitive-types.md"
                 },
                 {
                     "title": "String Formatting",
                     "route_segment": "string-formatting",
-                    "fsharp_file": "basics/string-formatting.fsx",
                     "markdown_file": "basics/string-formatting.md"
                 },
                 {
                     "title": "Operators",
                     "route_segment": "operators",
-                    "fsharp_file": "basics/operators.fsx",
                     "markdown_file": "basics/operators.md"
                 },
                 {
                     "title": "Conditional Expressions",
                     "route_segment": "conditional-expressions",
-                    "fsharp_file": "basics/conditional-expressions.fsx",
                     "markdown_file": "basics/conditional-expressions.md"
                 },
                 {
                     "title": "Patterns and Match Expressions",
                     "route_segment": "pattern-matching",
-                    "fsharp_file": "basics/patterns-and-match-expressions.fsx",
                     "markdown_file": "basics/patterns-and-match-expressions.md"
                 }
             ]
@@ -56,31 +49,26 @@
                 {
                     "title": "Defining Functions",
                     "route_segment": "definition",
-                    "fsharp_file": "functions/defining-functions.fsx",
                     "markdown_file": "functions/defining-functions.md"
                 },
                 {
                     "title": "Functions as Values",
                     "route_segment": "values",
-                    "fsharp_file": "functions/functions-as-values.fsx",
                     "markdown_file": "functions/functions-as-values.md"
                 },
                 {
                     "title": "Recursive Functions",
                     "route_segment": "recursive-functions",
-                    "fsharp_file": "functions/recursive-functions.fsx",
                     "markdown_file": "functions/recursive-functions.md"
                 },
                 {
                     "title": "Currying and Partial Application",
                     "route_segment": "currying-and-partial-application",
-                    "fsharp_file": "functions/currying-and-partial-application.fsx",
                     "markdown_file": "functions/currying-and-partial-application.md"
                 },
                 {
                     "title": "Pipelines and Composition",
                     "route_segment": "pipelines-and-composition",
-                    "fsharp_file": "functions/pipelines-and-composition.fsx",
                     "markdown_file": "functions/pipelines-and-composition.md"
                 }
             ]
@@ -92,67 +80,56 @@
                 {
                     "title": "Tuples",
                     "route_segment": "tuples",
-                    "fsharp_file": "data-and-types/tuples.fsx",
                     "markdown_file": "data-and-types/tuples.md"
                 },
                 {
                     "title": "Lists",
                     "route_segment": "lists",
-                    "fsharp_file": "data-and-types/lists.fsx",
                     "markdown_file": "data-and-types/lists.md"
                 },
                 {
                     "title": "Sequences",
                     "route_segment": "sequences",
-                    "fsharp_file": "data-and-types/sequences.fsx",
                     "markdown_file": "data-and-types/sequences.md"
                 },
                 {
                     "title": "Sequence Expressions",
                     "route_segment": "sequence-expressions",
-                    "fsharp_file": "data-and-types/sequence-expressions.fsx",
                     "markdown_file": "data-and-types/sequence-expressions.md"
                 },
                 {
                     "title": "Type Abbreviations",
                     "route_segment": "abbreviations",
-                    "fsharp_file": "data-and-types/abbreviations.fsx",
                     "markdown_file": "data-and-types/abbreviations.md"
                 },
                 {
                     "title": "Records",
                     "route_segment": "records",
-                    "fsharp_file": "data-and-types/records.fsx",
                     "markdown_file": "data-and-types/records.md"
                 },
                 {
                     "title": "Discriminated Unions",
                     "route_segment": "discriminated-unions",
-                    "fsharp_file": "data-and-types/discriminated-unions.fsx",
                     "markdown_file": "data-and-types/discriminated-unions.md"
                 },
                 {
                     "title": "Generic Types",
                     "route_segment": "generic-types",
-                    "fsharp_file": "data-and-types/generic-types.fsx",
                     "markdown_file": "data-and-types/generic-types.md"
                 },
                 {
                     "title": "The Option Type",
                     "route_segment": "options",
-                    "fsharp_file": "data-and-types/the-option-type.fsx",
                     "markdown_file": "data-and-types/the-option-type.md"
                 },
                 {
                     "title": "The Result Type",
                     "route_segment": "results",
-                    "fsharp_file": "data-and-types/the-result-type.fsx",
                     "markdown_file": "data-and-types/the-result-type.md"
                 },
                 {
                     "title": "Units of Measure",
                     "route_segment": "units-of-measure",
-                    "fsharp_file": "data-and-types/units-of-measure.fsx",
                     "markdown_file": "data-and-types/units-of-measure.md"
                 }
             ]
@@ -164,31 +141,26 @@
                 {
                     "title": "Objects and Members",
                     "route_segment": "objects-and-members",
-                    "fsharp_file": "object-programming/objects-and-members.fsx",
                     "markdown_file": "object-programming/objects-and-members.md"
                 },
                 {
                     "title": "Interfaces",
                     "route_segment": "interfaces",
-                    "fsharp_file": "object-programming/interfaces.fsx",
                     "markdown_file": "object-programming/interfaces.md"
                 },
                 {
                     "title": "Abstract Classes and Inheritance",
                     "route_segment": "abstract-classes-and-inheritance",
-                    "fsharp_file": "object-programming/abstract-classes-and-inheritance.fsx",
                     "markdown_file": "object-programming/abstract-classes-and-inheritance.md"
                 },
                 {
                     "title": "Object Expressions",
                     "route_segment": "object-expressions",
-                    "fsharp_file": "object-programming/object-expressions.fsx",
                     "markdown_file": "object-programming/object-expressions.md"
                 },
                 {
                     "title": "Type Extensions",
                     "route_segment": "type-extensions",
-                    "fsharp_file": "object-programming/type-extensions.fsx",
                     "markdown_file": "object-programming/type-extensions.md"
                 }
             ]
