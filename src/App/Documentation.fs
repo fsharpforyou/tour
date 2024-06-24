@@ -7,7 +7,6 @@ open Thoth.Json
 type Page = {
     Title: string
     Route: string list
-    FSharpCode: string
     MarkdownDocumentation: string
 }
 
@@ -92,13 +91,11 @@ let private fetchAsString path =
 
 let private loadPageFromJson (categoryJson: Json.CategoryJson) (pageJson: Json.PageJson) =
     promise {
-        let! fsharpCode = fetchAsString (documentationPath pageJson.FSharpFile)
         let! markdownDoc = fetchAsString (documentationPath pageJson.MarkdownFile)
 
         return {
             Title = pageJson.Title
             Route = [ categoryJson.RouteSegment; pageJson.RouteSegment ]
-            FSharpCode = fsharpCode
             MarkdownDocumentation = markdownDoc
         }
     }
