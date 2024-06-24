@@ -13,24 +13,28 @@ type MessageArgs<'msg> = {
     ConsoleError: string -> 'msg
 }
 
-let command (args: MessageArgs<'Msg>) =
+let command (iframeId: string) (args: MessageArgs<'Msg>) =
     let handler dispatch =
         window.addEventListener (
             "message",
             fun ev ->
-                let iframeMessageDecoder =
-                    Decode.field "type" Decode.string
-                    |> Decode.option
-                    |> Decode.andThen (function
-                        | Some "console_log" -> Decode.field "content" Decode.string |> Decode.map args.ConsoleLog
-                        | Some "console_warn" -> Decode.field "content" Decode.string |> Decode.map args.ConsoleWarn
-                        | Some "console_error" -> Decode.field "content" Decode.string |> Decode.map args.ConsoleError
-                        | _ -> Decode.fail "Invalid message")
+                let iframeElement = document.getElementById iframeId
 
-                Decode.fromValue "$" iframeMessageDecoder ev?data
-                |> function
-                    | Error _ -> ()
-                    | Ok msg -> dispatch msg
+                if ev?source = iframeElement?contentWindow then
+                    let iframeMessageDecoder =
+                        Decode.field "type" Decode.string
+                        |> Decode.option
+                        |> Decode.andThen (function
+                            | Some "console_log" -> Decode.field "content" Decode.string |> Decode.map args.ConsoleLog
+                            | Some "console_warn" -> Decode.field "content" Decode.string |> Decode.map args.ConsoleWarn
+                            | Some "console_error" ->
+                                Decode.field "content" Decode.string |> Decode.map args.ConsoleError
+                            | _ -> Decode.fail "Invalid message")
+
+                    Decode.fromValue "$" iframeMessageDecoder ev?data
+                    |> function
+                        | Error _ -> ()
+                        | Ok msg -> dispatch msg
         )
 
     [ handler ]
