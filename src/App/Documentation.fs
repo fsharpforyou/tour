@@ -47,7 +47,6 @@ module private Json =
     type PageJson = {
         Title: string
         RouteSegment: string
-        FSharpFile: string
         MarkdownFile: string
     }
 
@@ -66,7 +65,6 @@ module private Json =
         Decode.object (fun get -> {
             Title = get.Required.Field "title" Decode.string
             RouteSegment = get.Required.Field "route_segment" Decode.string
-            FSharpFile = get.Required.Field "fsharp_file" Decode.string
             MarkdownFile = get.Required.Field "markdown_file" Decode.string
         })
 
