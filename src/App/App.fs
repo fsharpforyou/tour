@@ -18,64 +18,6 @@ open Feliz.UseMediaQuery
 importSideEffects "react-toastify/dist/ReactToastify.css"
 importSideEffects "./monaco-vite.js"
 
-[<RequireQualifiedAccess>]
-type LogLevel =
-    | Log
-    | Warn
-    | Error
-
-[<RequireQualifiedAccess>]
-module LogLevel =
-    let toCssColor logLevel =
-        match logLevel with
-        | LogLevel.Log -> "inherit"
-        | LogLevel.Warn -> "darkorange"
-        | LogLevel.Error -> "red"
-
-type Model = {
-    Logs: (string * LogLevel) list
-    FSharpCode: string
-    CompiledJavaScript: string
-    Markdown: string
-    IFrameUrl: string
-    Worker: ObservableWorker<WorkerAnswer>
-    TableOfContents: Documentation.TableOfContents
-    CurrentPage: Navigation.Page
-    DocEntryNavigation: DocEntryNavigation
-    Editor: Monaco.Editor.IStandaloneCodeEditor
-    Markers: Monaco.Editor.IMarkerData array
-    Debouncer: Debouncer.State
-}
-
-type Msg =
-    | Compile
-    | SetIFrameUrl of string
-    | SetFSharpCode of string
-    | SetMarkdown of string
-    | AddConsoleLog of LogLevel * string
-    | Compiled of code: string * language: string * errors: Error array * stats: CompileStats
-    | FetchedTableOfContents of Documentation.TableOfContents
-    | FetchTableOfContentsExn of exn
-    | SetUrl of string list
-    | CalculateMarkdownAndCodeValues
-    | CalculateDocEntryNavigation
-    | SetMarkers of Monaco.Editor.IMarkerData array
-    | SetEditor of Monaco.Editor.IStandaloneCodeEditor
-    | DebouncerSelfMsg of Debouncer.SelfMessage<Msg>
-    | ParseCode
-
-[<Erase>]
-type SyntaxHighlighter =
-    static member inline language(value: string) = Interop.mkAttr "language" value
-    static member inline style(value: string) = Interop.mkAttr "style" value
-    static member inline children(value: ReactElement seq) = Interop.mkAttr "children" value
-
-    static member inline highlighter(properties: IReactProperty list) =
-        Interop.reactApi.createElement (
-            import "Prism as ReactSyntaxHighlighter" "react-syntax-highlighter",
-            createObj !!properties
-        )
-
 [<Erase>]
 type MonacoEditor =
     static member inline onChange(f: string -> unit) = Interop.mkAttr "onChange" f
@@ -91,17 +33,24 @@ type MonacoEditor =
     static member inline editor(properties: IReactProperty list) =
         Interop.reactApi.createElement (import "Editor" "@monaco-editor/react", createObj !!properties)
 
+[<RequireQualifiedAccess>]
 module WebWorker =
-    let create () = Worker.Create(Constants.worker)
+    open MonacoEditor.Monaco.Editor
 
-    let command (worker: ObservableWorker<_>) =
+    let create () = Worker.Create Constants.worker
+
+    let command
+        (setMarkersMsg: IMarkerData array -> 'msg)
+        (compiledMsg: string * string * Error array * CompileStats -> 'msg)
+        (worker: ObservableWorker<_>)
+        =
         let handler dispatch =
             worker
             |> Observable.add (function
                 | Loaded version -> ()
                 | LoadFailed -> ()
-                | ParsedCode errors -> errors |> Editor.mapErrorToMarker |> SetMarkers |> dispatch
-                | CompilationFinished(code, lang, errors, stats) -> dispatch (Compiled(code, lang, errors, stats))
+                | ParsedCode errors -> errors |> Editor.mapErrorToMarker |> setMarkersMsg |> dispatch
+                | CompilationFinished(code, lang, errors, stats) -> dispatch (compiledMsg (code, lang, errors, stats))
                 | CompilationsFinished(code, lang, errors, stats) -> ()
                 | CompilerCrashed msg -> ()
                 | FoundTooltip _ -> ()
@@ -110,368 +59,418 @@ module WebWorker =
 
         [ handler ]
 
-let getCurrentPage tableOfContents url =
-    let pages = Documentation.TableOfContents.allPages tableOfContents
-    Page.fromUrl pages url
+[<RequireQualifiedAccess>]
+module EditorInstance =
+    [<RequireQualifiedAccess>]
+    type LogLevel =
+        | Log
+        | Warn
+        | Error
 
-let init () =
-    let fsharpOptions = [| "--define:FABLE_COMPILER"; "--langversion:preview" |]
-    let worker = ObservableWorker(WebWorker.create (), WorkerAnswer.Decoder, "MAIN APP")
+    [<RequireQualifiedAccess>]
+    module LogLevel =
+        let toCssColor logLevel =
+            match logLevel with
+            | LogLevel.Log -> "inherit"
+            | LogLevel.Warn -> "darkorange"
+            | LogLevel.Error -> "red"
 
-    CreateChecker(Constants.metadata, [||], Some ".txt", fsharpOptions)
-    |> worker.Post
+        let fromCompilerError (error: Error) =
+            if error.IsWarning then LogLevel.Warn else LogLevel.Error
 
-    let cmd =
-        Cmd.batch [
-            WebWorker.command worker
-            Iframe.command {
-                ConsoleLog = fun out -> AddConsoleLog(LogLevel.Log, out)
-                ConsoleWarn = fun out -> AddConsoleLog(LogLevel.Warn, out)
-                ConsoleError = fun out -> AddConsoleLog(LogLevel.Error, out)
-            }
-            Cmd.OfPromise.either Documentation.loadTableOfContents () FetchedTableOfContents FetchTableOfContentsExn
-        ]
+    let toastNotificationFromErrors (errors: Error array) =
+        match errors with
+        | [||] -> Toastify.success "Compiled Successfully."
+        | _ -> Toastify.error "Failed to Compile."
 
-    let currentUrl = Router.currentUrl ()
-    let tableOfContents = Documentation.emptyTableOfContents
-    let currentPage = getCurrentPage tableOfContents currentUrl
+    let setModelMarkers (editor: Monaco.Editor.IStandaloneCodeEditor) (markers: Monaco.Editor.IMarkerData array) =
+        match editor.getModel () with
+        | None -> ()
+        | Some textModel -> Monaco.editor.setModelMarkers (textModel, "FSharpErrors", ResizeArray markers)
 
-    {
-        Logs = []
-        FSharpCode = ""
-        CompiledJavaScript = ""
-        Markdown = ""
-        IFrameUrl = ""
-        Worker = worker
-        TableOfContents = tableOfContents
-        CurrentPage = currentPage
-        DocEntryNavigation = {
-            PreviousEntry = None
-            NextEntry = None
-        }
-        Editor = Unchecked.defaultof<Monaco.Editor.IStandaloneCodeEditor>
-        Markers = [||]
-        Debouncer = Debouncer.create ()
-    },
-    cmd
+    type Model = {
+        Logs: (string * LogLevel) list
+        FSharpCode: string
+        CompiledJavaScript: string
+        IFrameIdentifier: string
+        IFrameUrl: string
+        Worker: ObservableWorker<WorkerAnswer>
+        Editor: Monaco.Editor.IStandaloneCodeEditor
+        Markers: Monaco.Editor.IMarkerData array
+        Debouncer: Debouncer.State
+    }
 
-let compile model =
-    let language = "javascript"
-    let fsharpOptions = [||]
-    CompileCode(model.FSharpCode, language, fsharpOptions) |> model.Worker.Post
+    [<RequireQualifiedAccess>]
+    type Msg =
+        | Compile
+        | ParseCode
+        | Compiled of code: string * language: string * errors: Error array * stats: CompileStats
+        | AddConsoleLog of string * LogLevel
+        | SetIFrameUrl of string
+        | SetFSharpCode of string
+        | DebouncerSelfMsg of Debouncer.SelfMessage<Msg>
+        | SetMarkers of Monaco.Editor.IMarkerData array
+        | SetEditor of Monaco.Editor.IStandaloneCodeEditor
 
-let helloWorldCode = "printfn \"Hello, World!\""
+    let compile model =
+        let language = "javascript"
+        let fsharpOptions = [||]
+        CompileCode(model.FSharpCode, language, fsharpOptions) |> model.Worker.Post
 
-let calculateMarkdownValue (tableOfContents: Documentation.TableOfContents) currentPage =
-    match currentPage with
-    | Page.DocPage docPage -> docPage.MarkdownDocumentation
-    | Page.NotFound
-    | Page.Homepage -> tableOfContents.RootMarkdown
-    | Page.TableOfContents -> Documentation.TableOfContents.toMarkdownString tableOfContents
+    let init initialFsharpCode =
+        fun () ->
+            let randomIdentifier = Guid.NewGuid().ToString()
+            let fsharpOptions = [| "--define:FABLE_COMPILER"; "--langversion:preview" |]
 
-let calculateFSharpCodeValue currentPage =
-    match currentPage with
-    | Page.DocPage docPage -> docPage.FSharpCode
-    | Page.NotFound
-    | Page.Homepage
-    | Page.TableOfContents -> helloWorldCode
+            let worker =
+                ObservableWorker(WebWorker.create (), WorkerAnswer.Decoder, randomIdentifier)
 
-let setModelMarkers (editor: Monaco.Editor.IStandaloneCodeEditor) (markers: Monaco.Editor.IMarkerData array) =
-    match editor.getModel () with
-    | None -> ()
-    | Some textModel -> Monaco.editor.setModelMarkers (textModel, "FSharpErrors", ResizeArray markers)
+            CreateChecker(Constants.metadata, [||], Some ".txt", fsharpOptions)
+            |> worker.Post
 
-let errorToLogLevel (error: Error) =
-    if error.IsWarning then LogLevel.Warn else LogLevel.Error
-
-let toastNotificationFromErrors (errors: Error array) =
-    match errors with
-    | [||] -> Toastify.success "Compiled Successfully."
-    | _ -> Toastify.error "Failed to Compile."
-
-let scrollToTopOfMarkdown () =
-    let markdownElement = document.getElementById "markdown-content"
-    markdownElement.scrollTo (0, 0)
-
-let update msg model =
-    match msg with
-    | Compile -> { model with Logs = [] }, Cmd.ofEffect (fun _ -> compile model)
-    | SetIFrameUrl url -> { model with IFrameUrl = url }, Cmd.none
-    | SetMarkdown doc -> { model with Markdown = doc }, Cmd.none
-    | SetEditor editor -> { model with Editor = editor }, Cmd.none
-    | ParseCode -> model, Cmd.ofEffect (fun _ -> WorkerRequest.ParseCode(model.FSharpCode, [||]) |> model.Worker.Post)
-    | SetFSharpCode code ->
-        let (debouncerModel, debouncerCmd) =
-            model.Debouncer
-            |> Debouncer.bounce (TimeSpan.FromSeconds 1) "user_input" ParseCode
-
-        {
-            model with
-                FSharpCode = code
-                Debouncer = debouncerModel
-        },
-        Cmd.map DebouncerSelfMsg debouncerCmd
-    | SetMarkers markers ->
-        let model = { model with Markers = markers }
-        let cmd = Cmd.ofEffect (fun _ -> setModelMarkers model.Editor model.Markers)
-        model, cmd
-    | AddConsoleLog(level, output) ->
-        let logs = model.Logs @ [ (output, level) ]
-        { model with Logs = logs }, Cmd.none
-    | Compiled(code, _, errors, _) ->
-        let logs =
-            if errors.Length = 0 then
-                model.Logs
-            else
-                let errorLogs =
-                    errors
-                    |> Array.map (fun error -> error.Message, errorToLogLevel error)
-                    |> Array.toList
-
-                model.Logs @ errorLogs
-
-        let model = {
-            model with
-                CompiledJavaScript = code
-                Logs = logs
-        }
-
-        model,
-        Cmd.batch [
-            Cmd.ofEffect (fun _ -> toastNotificationFromErrors errors |> ignore)
-            errors |> Editor.mapErrorToMarker |> SetMarkers |> Cmd.ofMsg
-            Cmd.OfFunc.perform Iframe.generateHtmlBlobUrl model.CompiledJavaScript SetIFrameUrl
-        ]
-    | FetchedTableOfContents tableOfContents ->
-        let url = Router.currentUrl ()
-        let currentPage = getCurrentPage tableOfContents url
-
-        {
-            model with
-                CurrentPage = currentPage
-                TableOfContents = tableOfContents
-        },
-        Cmd.batch [
-            Cmd.ofMsg CalculateMarkdownAndCodeValues
-            Cmd.ofMsg CalculateDocEntryNavigation
-        ]
-    | FetchTableOfContentsExn exn -> model, Cmd.none // TODO: this.
-    | SetUrl url ->
-        let currentPage = getCurrentPage model.TableOfContents url
-
-        { model with CurrentPage = currentPage },
-        Cmd.batch [
-            Cmd.ofMsg CalculateMarkdownAndCodeValues
-            Cmd.ofMsg CalculateDocEntryNavigation
-        ]
-    | CalculateMarkdownAndCodeValues ->
-        let fsharpCode = calculateFSharpCodeValue model.CurrentPage
-        let markdown = calculateMarkdownValue model.TableOfContents model.CurrentPage
-        // clear the logs when we calculate new values.
-        { model with Logs = [] },
-        // this has useful side-effects like triggering an initial parse through the `SetFSharpCode` msg.
-        Cmd.batch [
-            Cmd.ofMsg (SetFSharpCode fsharpCode)
-            Cmd.ofMsg (SetMarkdown markdown)
-            Cmd.ofEffect (fun _ -> scrollToTopOfMarkdown ())
-        ]
-    | CalculateDocEntryNavigation ->
-        let allEntries = Documentation.TableOfContents.allPages model.TableOfContents
-
-        let currentEntry =
-            match model.CurrentPage with
-            | Page.DocPage docPage -> Entry docPage
-            | _ -> NotViewingEntry
-
-        {
-            model with
-                DocEntryNavigation = getDocEntryNavigation currentEntry allEntries
-        },
-        Cmd.none
-    | DebouncerSelfMsg debouncerMsg ->
-        let (debouncerModel, debouncerCmd) = Debouncer.update debouncerMsg model.Debouncer
-
-        {
-            model with
-                Debouncer = debouncerModel
-        },
-        debouncerCmd
-
-let (|DesktopSize|MobileSize|) (screenSize: ScreenSize) =
-    match screenSize with
-    | ScreenSize.Desktop
-    | ScreenSize.WideScreen -> DesktopSize
-    | ScreenSize.Tablet
-    | ScreenSize.Mobile
-    | ScreenSize.MobileLandscape -> MobileSize
-
-let mobileNavbar =
-    Html.ul [ Html.li [ Html.a [ prop.href (Router.format []); prop.text "F# For You" ] ] ]
-
-let imageLink href src text =
-    Html.a [
-        prop.href href
-        prop.target "_blank"
-        prop.children [
-            Html.img [
-                prop.src src
-                prop.width 40
-                prop.height 40
-                prop.style [ style.marginRight (length.px 5) ]
+            {
+                Logs = []
+                FSharpCode = initialFsharpCode
+                CompiledJavaScript = ""
+                IFrameIdentifier = randomIdentifier
+                IFrameUrl = ""
+                Worker = worker
+                Editor = Unchecked.defaultof<_>
+                Markers = [||]
+                Debouncer = Debouncer.create ()
+            },
+            Cmd.batch [
+                WebWorker.command Msg.SetMarkers Msg.Compiled worker
+                Iframe.command randomIdentifier {
+                    ConsoleLog = fun text -> Msg.AddConsoleLog(text, LogLevel.Log)
+                    ConsoleWarn = fun text -> Msg.AddConsoleLog(text, LogLevel.Warn)
+                    ConsoleError = fun text -> Msg.AddConsoleLog(text, LogLevel.Error)
+                }
+                Cmd.ofMsg Msg.ParseCode // NOTE: this may have terrible performance lol
             ]
-            Html.small (text: string)
-        ]
-    ]
 
-let desktopNavbar = [
-    Html.ul [ Html.li [ imageLink (Router.format []) "img/fsharp.png" "F# For You!" ] ]
+    let update msg model =
+        match msg with
+        | Msg.Compile -> { model with Logs = [] }, Cmd.ofEffect (fun _ -> compile model)
+        | Msg.ParseCode ->
+            model, Cmd.ofEffect (fun _ -> WorkerRequest.ParseCode(model.FSharpCode, [||]) |> model.Worker.Post)
+        | Msg.SetIFrameUrl url -> { model with IFrameUrl = url }, Cmd.none
+        | Msg.SetEditor editor -> { model with Editor = editor }, Cmd.none
+        | Msg.AddConsoleLog(logText, logLevel) ->
+            let logs = model.Logs @ [ (logText, logLevel) ]
+            { model with Logs = logs }, Cmd.none
+        | Msg.SetMarkers markers ->
+            let model = { model with Markers = markers }
+            let cmd = Cmd.ofEffect (fun _ -> setModelMarkers model.Editor model.Markers)
+            model, cmd
+        | Msg.SetFSharpCode code ->
+            let (debouncerModel, debouncerCmd) =
+                model.Debouncer
+                |> Debouncer.bounce (TimeSpan.FromSeconds 1) "user_input" Msg.ParseCode
 
-    Html.ul [
-        Html.li [ imageLink "https://fable.io" "img/fable.png" "Powered by Fable" ]
-        Html.li [
-            imageLink "https://github.com/fsharpforyou/tour" "img/github.png" "View Source Code"
-        ]
-    ]
-]
+            {
+                model with
+                    FSharpCode = code
+                    Debouncer = debouncerModel
+            },
+            Cmd.map Msg.DebouncerSelfMsg debouncerCmd
+        | Msg.Compiled(code, language, errors, stats) ->
+            let logs =
+                if errors.Length = 0 then
+                    model.Logs
+                else
+                    let errorLogs =
+                        errors
+                        |> Array.map (fun error -> error.Message, LogLevel.fromCompilerError error)
+                        |> Array.toList
 
-module View =
+                    model.Logs @ errorLogs
+
+            let model = {
+                model with
+                    CompiledJavaScript = code
+                    Logs = logs
+            }
+
+            model,
+            Cmd.batch [
+                Cmd.ofEffect (fun _ -> toastNotificationFromErrors errors |> ignore)
+                errors |> Editor.mapErrorToMarker |> Msg.SetMarkers |> Cmd.ofMsg
+                Cmd.OfFunc.perform Iframe.generateHtmlBlobUrl model.CompiledJavaScript Msg.SetIFrameUrl
+            ]
+        | Msg.DebouncerSelfMsg debouncerMsg ->
+            let (debouncerModel, debouncerCmd) = Debouncer.update debouncerMsg model.Debouncer
+
+            {
+                model with
+                    Debouncer = debouncerModel
+            },
+            debouncerCmd
+
     [<ReactComponent>]
-    let AppView () =
+    let Component initialFsharpCode =
+        let model, dispatch = React.useElmish (init initialFsharpCode, update)
+
+        Html.div [
+            Html.i [
+                prop.style [ style.float'.right; style.color "green" ]
+                prop.className "fa-solid fa-play"
+                prop.onClick (fun _ -> dispatch Msg.Compile)
+            ]
+            //Html.button [ prop.text "Compile"; prop.onClick (fun _ -> dispatch Msg.Compile) ]
+            // Html.a [
+            //     prop.href "/#/playground/#/"
+            //     prop.children [ Html.i [ prop.className "fa-solid fa-flask" ] ]
+            // ]
+
+            MonacoEditor.editor [
+                MonacoEditor.height "350px"
+                prop.className "monaco-editor"
+                MonacoEditor.defaultLanguage "fsharp"
+                MonacoEditor.value model.FSharpCode
+                MonacoEditor.theme "vs"
+                MonacoEditor.onChange (Msg.SetFSharpCode >> dispatch)
+                MonacoEditor.onMount (Editor.onFSharpEditorDidMount model.Worker (Msg.SetEditor >> dispatch))
+            ]
+            match model.Logs with
+            | [] -> Html.none
+            | logs ->
+                Html.article [
+                    prop.style [ style.height (length.percent 30); style.overflow.scroll ]
+                    prop.children [
+                        // Html.h4 "Output"
+                        for (log, level) in logs do
+                            Html.p [ prop.style [ style.color (LogLevel.toCssColor level) ]; prop.text log ]
+                    ]
+                ]
+            Html.iframe [
+                prop.id model.IFrameIdentifier
+                prop.src model.IFrameUrl
+                prop.style [
+                    style.position.absolute
+                    style.width 0
+                    style.height 0
+                    style.border (0, borderStyle.hidden, "")
+                ]
+            ]
+        ]
+
+[<RequireQualifiedAccess>]
+module App =
+    type Model = {
+        Markdown: string
+        TableOfContents: Documentation.TableOfContents
+        CurrentPage: Navigation.Page
+        DocEntryNavigation: DocEntryNavigation
+    }
+
+    [<RequireQualifiedAccess>]
+    type Msg =
+        | SetMarkdown of string
+        | FetchedTableOfContents of Documentation.TableOfContents
+        | SetUrl of string list
+        | GetMarkdownValue
+        | GetDocEntryNavigation
+
+    let private getCurrentPage tableOfContents url =
+        let docPages = Documentation.TableOfContents.allPages tableOfContents
+        Page.fromUrl docPages url
+
+    let (|DesktopSize|MobileSize|) (screenSize: ScreenSize) =
+        match screenSize with
+        | ScreenSize.Desktop
+        | ScreenSize.WideScreen -> DesktopSize
+        | ScreenSize.Tablet
+        | ScreenSize.Mobile
+        | ScreenSize.MobileLandscape -> MobileSize
+
+    let calculateMarkdownValue (tableOfContents: Documentation.TableOfContents) currentPage =
+        match currentPage with
+        | Page.DocPage docPage -> docPage.MarkdownDocumentation
+        | Page.NotFound
+        | Page.Homepage -> tableOfContents.RootMarkdown
+        | Page.TableOfContents -> Documentation.TableOfContents.toMarkdownString tableOfContents
+
+    let scrollToTopOfMarkdown () =
+        let markdownElement = document.getElementById "markdown-content"
+        markdownElement.scrollTo (0, 0)
+
+    let mobileNavbar =
+        Html.ul [ Html.li [ Html.a [ prop.href (Router.format []); prop.text "F# For You" ] ] ]
+
+    let imageLink href src text =
+        Html.a [
+            prop.href href
+            prop.target "_blank"
+            prop.children [
+                Html.img [
+                    prop.src src
+                    prop.width 40
+                    prop.height 40
+                    prop.style [ style.marginRight (length.px 5) ]
+                ]
+                Html.small (text: string)
+            ]
+        ]
+
+    let desktopNavbar = [
+        Html.ul [ Html.li [ imageLink (Router.format []) "img/fsharp.png" "F# For You!" ] ]
+
+        Html.ul [
+            Html.li [ imageLink "https://fable.io" "img/fable.png" "Powered by Fable" ]
+            Html.li [
+                imageLink "https://github.com/fsharpforyou/tour" "img/github.png" "View Source Code"
+            ]
+        ]
+    ]
+
+    let init () =
+        let currentUrl = Router.currentUrl ()
+        let tableOfContents = Documentation.emptyTableOfContents
+        let currentPage = getCurrentPage tableOfContents currentUrl
+
+        {
+            Markdown = ""
+            TableOfContents = tableOfContents
+            CurrentPage = currentPage
+            DocEntryNavigation = {
+                PreviousEntry = None
+                NextEntry = None
+            }
+        },
+        Cmd.OfPromise.perform Documentation.loadTableOfContents () Msg.FetchedTableOfContents
+
+    let update msg model =
+        match msg with
+        | Msg.SetMarkdown doc -> { model with Markdown = doc }, Cmd.none
+        | Msg.FetchedTableOfContents tableOfContents ->
+            let url = Router.currentUrl ()
+            let currentPage = getCurrentPage tableOfContents url
+
+            {
+                model with
+                    CurrentPage = currentPage
+                    TableOfContents = tableOfContents
+            },
+            Cmd.batch [ Cmd.ofMsg Msg.GetMarkdownValue; Cmd.ofMsg Msg.GetDocEntryNavigation ]
+        | Msg.SetUrl url ->
+            let currentPage = getCurrentPage model.TableOfContents url
+
+            { model with CurrentPage = currentPage },
+            Cmd.batch [ Cmd.ofMsg Msg.GetMarkdownValue; Cmd.ofMsg Msg.GetDocEntryNavigation ]
+        | Msg.GetMarkdownValue ->
+            let markdown = calculateMarkdownValue model.TableOfContents model.CurrentPage
+            { model with Markdown = markdown }, Cmd.batch [ Cmd.ofEffect (fun _ -> scrollToTopOfMarkdown ()) ]
+        | Msg.GetDocEntryNavigation ->
+            let allEntries = Documentation.TableOfContents.allPages model.TableOfContents
+
+            let currentEntry =
+                match model.CurrentPage with
+                | Page.DocPage docPage -> Entry docPage
+                | _ -> NotViewingEntry
+
+            {
+                model with
+                    DocEntryNavigation = getDocEntryNavigation currentEntry allEntries
+            },
+            Cmd.none
+
+    [<ReactComponent>]
+    let Component () =
         let model, dispatch = React.useElmish (init, update)
         let screenSize = React.useResponsive Breakpoints.defaults
 
         React.router [
-            router.onUrlChanged (SetUrl >> dispatch)
+            router.onUrlChanged (Msg.SetUrl >> dispatch)
             router.children [
                 Html.main [
-                    prop.style [
-                        style.display.grid
-
-                        match screenSize with
-                        | MobileSize ->
-                            style.gridTemplateAreas [| [| "header" |]; [| "markdown" |]; [| "editor" |] |]
-                            style.gridTemplateRows [| length.percent 10; length.auto; length.px 750 |]
-                            style.gridTemplateColumns [| length.percent 100 |]
-                        | DesktopSize ->
-                            style.height (length.percent 100)
-                            style.gridTemplateAreas [| [| "header"; "header" |]; [| "markdown"; "editor" |] |]
-                            style.gridTemplateRows [| length.percent 10; length.percent 90 |]
-                            style.gridTemplateColumns [| length.percent 50; length.percent 50 |]
-                    ]
-                    prop.children [
-                        Html.header [
-                            prop.style [ style.gridArea "header" ]
-                            prop.children [
-                                Html.nav [
-                                    match screenSize with
-                                    | MobileSize -> mobileNavbar
-                                    | DesktopSize -> yield! desktopNavbar
-
-                                    Html.ul [
-                                        Html.button [ prop.text "Run"; prop.onClick (fun _ -> dispatch Compile) ]
-                                    ]
-                                ]
-                            ]
+                    Html.header [
+                        Html.nav [
+                            match screenSize with
+                            | MobileSize -> mobileNavbar
+                            | DesktopSize -> yield! desktopNavbar
                         ]
-                        Html.section [
-                            prop.id "markdown-content"
-                            prop.style [
-                                style.gridArea "markdown"
-                                style.custom ("text-wrap", "balance")
-                                style.overflowX.hidden
-                            ]
-                            prop.children [
-                                Markdown.markdown [
-                                    markdown.children model.Markdown
-                                    markdown.components [
-                                        markdown.components.code (fun props ->
-                                            if props.isInline then
-                                                Html.code props.children
-                                            else
-                                                let style =
-                                                    import "vs" "react-syntax-highlighter/dist/esm/styles/prism"
-
-                                                let language = props.className.Replace("language-", "")
-
-                                                SyntaxHighlighter.highlighter [
-                                                    SyntaxHighlighter.language language
-                                                    SyntaxHighlighter.style style
-                                                    SyntaxHighlighter.children props.children
-                                                ])
-                                    ]
-                                ]
-
-                                Html.nav [
-                                    Html.ul [
-                                        match model.DocEntryNavigation.PreviousEntry with
-                                        | None -> Html.none
-                                        | Some entry ->
-                                            Html.li [
-                                                Html.a [
-                                                    prop.href (Router.format entry.Route)
-                                                    prop.text $"< {entry.Title}"
-                                                ]
-                                            ]
-                                        Html.li [
-                                            Html.a [
-                                                prop.href (Router.format [ "table-of-contents" ])
-                                                prop.text "Table of Contents"
-                                            ]
-                                        ]
-                                        match model.DocEntryNavigation.NextEntry with
-                                        | None -> Html.none
-                                        | Some entry ->
-                                            Html.li [
-                                                Html.a [
-                                                    prop.href (Router.format entry.Route)
-                                                    prop.text $"{entry.Title} >"
+                    ]
+                    Html.div [
+                        prop.style [
+                            style.display.grid
+                            style.gridTemplateAreas [| "sidebar"; "markdown" |]
+                            style.gridTemplateRows [| length.percent 100 |]
+                            style.gridTemplateColumns [| length.percent 20; length.percent 80 |]
+                        ]
+                        prop.children [
+                            Html.aside [
+                                prop.style [ style.gridArea "sidebar" ]
+                                prop.children [
+                                    Html.nav [
+                                        for category in model.TableOfContents.Categories do
+                                            Html.details [
+                                                Html.summary [ Html.strong category.Title ]
+                                                Html.ul [
+                                                    for page in category.Pages do
+                                                        Html.li [
+                                                            Html.a [
+                                                                prop.href (Router.format page.Route)
+                                                                prop.text page.Title
+                                                            ]
+                                                        ]
                                                 ]
                                             ]
                                     ]
                                 ]
                             ]
-                        ]
-                        Html.section [
-                            prop.style [ style.gridArea "editor" ]
-                            prop.children [
-                                Html.section [
-                                    prop.style [ style.height (length.percent 70) ]
-                                    prop.children [
-                                        MonacoEditor.editor [
-                                            MonacoEditor.defaultLanguage "fsharp"
-                                            MonacoEditor.value model.FSharpCode
-                                            MonacoEditor.theme "vs"
-                                            MonacoEditor.onChange (SetFSharpCode >> dispatch)
-                                            MonacoEditor.onMount (
-                                                Editor.onFSharpEditorDidMount model.Worker (SetEditor >> dispatch)
-                                            )
+                            Html.section [
+                                prop.id "markdown-content"
+                                prop.className "container-fluid"
+                                prop.style [ style.gridArea "markdown" ]
+                                prop.children [
+                                    Markdown.markdown [
+                                        markdown.children model.Markdown
+                                        markdown.components [
+                                            markdown.components.pre (fun props -> React.fragment props.children) // This doesn't wrap our editor instance in a `pre`
+                                            markdown.components.code (fun props ->
+                                                if props.isInline then
+                                                    Html.code props.children
+                                                else
+                                                    // this is an interesting way to get the value of a code block
+                                                    props.children
+                                                    |> Seq.tryHead
+                                                    |> Option.map (string >> EditorInstance.Component)
+                                                    |> Option.defaultValue Html.none)
                                         ]
                                     ]
-                                ]
-                                Html.article [
-                                    prop.style [ style.height (length.percent 30); style.overflow.scroll ]
-                                    prop.children [
-                                        Html.h4 "Output"
-                                        for (log, level) in model.Logs do
-                                            Html.p [
-                                                prop.style [ style.color (LogLevel.toCssColor level) ]
-                                                prop.text log
-                                            ]
 
-                                            Html.hr []
+                                    Html.nav [
+                                        Html.ul [
+                                            match model.DocEntryNavigation.PreviousEntry with
+                                            | None -> Html.none
+                                            | Some entry ->
+                                                Html.li [
+                                                    Html.a [
+                                                        prop.href (Router.format entry.Route)
+                                                        prop.text $"< {entry.Title}"
+                                                    ]
+                                                ]
+                                            Html.li [
+                                                Html.a [
+                                                    prop.href (Router.format [ "table-of-contents" ])
+                                                    prop.text "Table of Contents"
+                                                ]
+                                            ]
+                                            match model.DocEntryNavigation.NextEntry with
+                                            | None -> Html.none
+                                            | Some entry ->
+                                                Html.li [
+                                                    Html.a [
+                                                        prop.href (Router.format entry.Route)
+                                                        prop.text $"{entry.Title} >"
+                                                    ]
+                                                ]
+                                        ]
                                     ]
                                 ]
                             ]
                         ]
-                    ]
-                ]
-                Html.iframe [
-                    prop.src model.IFrameUrl
-                    prop.style [
-                        style.position.absolute
-                        style.width 0
-                        style.height 0
-                        style.border (0, borderStyle.hidden, "")
                     ]
                 ]
                 Toastify.container [
@@ -482,4 +481,4 @@ module View =
             ]
         ]
 
-ReactDOM.createRoot(document.getElementById "app").render (View.AppView())
+ReactDOM.createRoot(document.getElementById "app").render (App.Component())
