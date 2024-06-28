@@ -146,6 +146,7 @@ module EditorInstance =
                     ConsoleWarn = fun text -> Msg.AddConsoleLog(text, LogLevel.Warn)
                     ConsoleError = fun text -> Msg.AddConsoleLog(text, LogLevel.Error)
                 }
+                Cmd.ofMsg Msg.ParseCode // NOTE: this may have terrible performance lol
             ]
 
     let update msg model =
@@ -211,6 +212,17 @@ module EditorInstance =
         let model, dispatch = React.useElmish (init initialFsharpCode, update)
 
         Html.div [
+            Html.i [
+                prop.style [ style.float'.right; style.color "green" ]
+                prop.className "fa-solid fa-play"
+                prop.onClick (fun _ -> dispatch Msg.Compile)
+            ]
+            //Html.button [ prop.text "Compile"; prop.onClick (fun _ -> dispatch Msg.Compile) ]
+            // Html.a [
+            //     prop.href "/#/playground/#/"
+            //     prop.children [ Html.i [ prop.className "fa-solid fa-flask" ] ]
+            // ]
+
             MonacoEditor.editor [
                 MonacoEditor.height "350px"
                 prop.className "monaco-editor"
@@ -220,10 +232,6 @@ module EditorInstance =
                 MonacoEditor.onChange (Msg.SetFSharpCode >> dispatch)
                 MonacoEditor.onMount (Editor.onFSharpEditorDidMount model.Worker (Msg.SetEditor >> dispatch))
             ]
-
-            Html.button [ prop.text "Compile"; prop.onClick (fun _ -> dispatch Msg.Compile) ]
-            Html.button [ prop.text "Open in Playground" ]
-
             match model.Logs with
             | [] -> Html.none
             | logs ->
@@ -233,8 +241,6 @@ module EditorInstance =
                         // Html.h4 "Output"
                         for (log, level) in logs do
                             Html.p [ prop.style [ style.color (LogLevel.toCssColor level) ]; prop.text log ]
-
-                            Html.hr []
                     ]
                 ]
             Html.iframe [
@@ -385,51 +391,83 @@ module App =
                             | DesktopSize -> yield! desktopNavbar
                         ]
                     ]
-                    Html.section [
-                        prop.id "markdown-content"
+                    Html.div [
+                        prop.style [
+                            style.display.grid
+                            style.gridTemplateAreas [| "sidebar"; "markdown" |]
+                            style.gridTemplateRows [| length.percent 100 |]
+                            style.gridTemplateColumns [| length.percent 20; length.percent 80 |]
+                        ]
                         prop.children [
-                            Markdown.markdown [
-                                markdown.children model.Markdown
-                                markdown.components [
-                                    markdown.components.pre (fun props -> React.fragment props.children) // This doesn't wrap our editor instance in a `pre`
-                                    markdown.components.code (fun props ->
-                                        if props.isInline then
-                                            Html.code props.children
-                                        else
-                                            // this is an interesting way to get the value of a code block
-                                            props.children
-                                            |> Seq.tryHead
-                                            |> Option.map (string >> EditorInstance.Component)
-                                            |> Option.defaultValue Html.none)
+                            Html.aside [
+                                prop.style [ style.gridArea "sidebar" ]
+                                prop.children [
+                                    Html.nav [
+                                        for category in model.TableOfContents.Categories do
+                                            Html.details [
+                                                Html.summary [ Html.strong category.Title ]
+                                                Html.ul [
+                                                    for page in category.Pages do
+                                                        Html.li [
+                                                            Html.a [
+                                                                prop.href (Router.format page.Route)
+                                                                prop.text page.Title
+                                                            ]
+                                                        ]
+                                                ]
+                                            ]
+                                    ]
                                 ]
                             ]
-
-                            Html.nav [
-                                Html.ul [
-                                    match model.DocEntryNavigation.PreviousEntry with
-                                    | None -> Html.none
-                                    | Some entry ->
-                                        Html.li [
-                                            Html.a [
-                                                prop.href (Router.format entry.Route)
-                                                prop.text $"< {entry.Title}"
-                                            ]
-                                        ]
-                                    Html.li [
-                                        Html.a [
-                                            prop.href (Router.format [ "table-of-contents" ])
-                                            prop.text "Table of Contents"
+                            Html.section [
+                                prop.id "markdown-content"
+                                prop.className "container-fluid"
+                                prop.style [ style.gridArea "markdown" ]
+                                prop.children [
+                                    Markdown.markdown [
+                                        markdown.children model.Markdown
+                                        markdown.components [
+                                            markdown.components.pre (fun props -> React.fragment props.children) // This doesn't wrap our editor instance in a `pre`
+                                            markdown.components.code (fun props ->
+                                                if props.isInline then
+                                                    Html.code props.children
+                                                else
+                                                    // this is an interesting way to get the value of a code block
+                                                    props.children
+                                                    |> Seq.tryHead
+                                                    |> Option.map (string >> EditorInstance.Component)
+                                                    |> Option.defaultValue Html.none)
                                         ]
                                     ]
-                                    match model.DocEntryNavigation.NextEntry with
-                                    | None -> Html.none
-                                    | Some entry ->
-                                        Html.li [
-                                            Html.a [
-                                                prop.href (Router.format entry.Route)
-                                                prop.text $"{entry.Title} >"
+
+                                    Html.nav [
+                                        Html.ul [
+                                            match model.DocEntryNavigation.PreviousEntry with
+                                            | None -> Html.none
+                                            | Some entry ->
+                                                Html.li [
+                                                    Html.a [
+                                                        prop.href (Router.format entry.Route)
+                                                        prop.text $"< {entry.Title}"
+                                                    ]
+                                                ]
+                                            Html.li [
+                                                Html.a [
+                                                    prop.href (Router.format [ "table-of-contents" ])
+                                                    prop.text "Table of Contents"
+                                                ]
                                             ]
+                                            match model.DocEntryNavigation.NextEntry with
+                                            | None -> Html.none
+                                            | Some entry ->
+                                                Html.li [
+                                                    Html.a [
+                                                        prop.href (Router.format entry.Route)
+                                                        prop.text $"{entry.Title} >"
+                                                    ]
+                                                ]
                                         ]
+                                    ]
                                 ]
                             ]
                         ]
