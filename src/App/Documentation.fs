@@ -4,47 +4,31 @@ module Documentation
 open Feliz.Router
 open Thoth.Json
 
-type Page = {
+type Entry = {
     Title: string
     Route: string list
     MarkdownDocumentation: string
+    GitHubUrl: string
 }
 
-type Category = { Title: string; Pages: Page list }
+type Category = { Title: string; Entries: Entry list }
 
 type TableOfContents = {
     RootMarkdown: string
+    RootGitHubUrl: string
     Categories: Category list
 }
 
+let makeGitHubUrl relativePath =
+    $"https://github.com/fsharpforyou/tour/tree/main/public/documentation/{relativePath}"
+
 [<RequireQualifiedAccess>]
 module TableOfContents =
-    let allPages tableOfContents =
-        tableOfContents.Categories |> List.collect _.Pages
-
-    let toMarkdownString tableOfContents =
-        let bulletPoint value = $"* {value}"
-        let createMarkdownLink value url = $"[{value}]({url})"
-
-        let createHeading level value =
-            let hashtags = String.replicate level "#"
-            $"{hashtags} {value}"
-
-        let createUrlForPage page = Router.format page.Route
-
-        let categoryToPageUrls category =
-            category.Pages
-            |> List.map (fun page -> page |> createUrlForPage |> createMarkdownLink page.Title |> bulletPoint)
-
-        let createMarkdownForCategory category =
-            [ createHeading 2 category.Title ] @ categoryToPageUrls category
-
-        [ createHeading 1 "Table of Contents" ]
-        @ List.collect createMarkdownForCategory tableOfContents.Categories
-        |> String.concat "\n"
+    let allEntries tableOfContents =
+        tableOfContents.Categories |> List.collect _.Entries
 
 module private Json =
-    type PageJson = {
+    type EntryJson = {
         Title: string
         RouteSegment: string
         MarkdownFile: string
@@ -53,7 +37,7 @@ module private Json =
     type CategoryJson = {
         Title: string
         RouteSegment: string
-        Pages: PageJson list
+        Entries: EntryJson list
     }
 
     type TableOfContentsJson = {
@@ -61,7 +45,7 @@ module private Json =
         Categories: CategoryJson list
     }
 
-    let pageDecoder =
+    let entryDecoder =
         Decode.object (fun get -> {
             Title = get.Required.Field "title" Decode.string
             RouteSegment = get.Required.Field "route_segment" Decode.string
@@ -72,7 +56,7 @@ module private Json =
         Decode.object (fun get -> {
             Title = get.Required.Field "title" Decode.string
             RouteSegment = get.Required.Field "route_segment" Decode.string
-            Pages = get.Required.Field "pages" (Decode.list pageDecoder)
+            Entries = get.Required.Field "entries" (Decode.list entryDecoder)
         })
 
     let tableOfContentsDecoder =
@@ -81,33 +65,39 @@ module private Json =
             Categories = get.Required.Field "categories" (Decode.list categoryDecoder)
         })
 
-let emptyTableOfContents = { RootMarkdown = ""; Categories = [] }
+let emptyTableOfContents = {
+    RootMarkdown = ""
+    RootGitHubUrl = ""
+    Categories = []
+}
+
 let private documentationPath path = Constants.documentation + path
 
 let private fetchAsString path =
     Fetch.fetch path [] |> Promise.bind (fun res -> res.text ())
 
-let private loadPageFromJson (categoryJson: Json.CategoryJson) (pageJson: Json.PageJson) =
+let private loadEntryFromJson (categoryJson: Json.CategoryJson) (entryJson: Json.EntryJson) =
     promise {
-        let! markdownDoc = fetchAsString (documentationPath pageJson.MarkdownFile)
+        let! markdownDoc = fetchAsString (documentationPath entryJson.MarkdownFile)
 
         return {
-            Title = pageJson.Title
-            Route = [ categoryJson.RouteSegment; pageJson.RouteSegment ]
+            Title = entryJson.Title
+            Route = [ categoryJson.RouteSegment; entryJson.RouteSegment ]
             MarkdownDocumentation = markdownDoc
+            GitHubUrl = makeGitHubUrl entryJson.MarkdownFile
         }
     }
 
 let private loadCategoryFromJson (categoryJson: Json.CategoryJson) =
     promise {
-        let! pages =
-            categoryJson.Pages
-            |> List.map (fun page -> loadPageFromJson categoryJson page)
+        let! entries =
+            categoryJson.Entries
+            |> List.map (fun entry -> loadEntryFromJson categoryJson entry)
             |> Promise.all
 
         return {
             Title = categoryJson.Title
-            Pages = Seq.toList pages
+            Entries = Seq.toList entries
         }
     }
 
@@ -118,6 +108,7 @@ let private loadTableOfContentsFromJson (tableOfContentsJson: Json.TableOfConten
 
         return {
             RootMarkdown = rootMarkdown
+            RootGitHubUrl = makeGitHubUrl tableOfContentsJson.RootMarkdownFile
             Categories = Seq.toList categories
         }
     }

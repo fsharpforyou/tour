@@ -1,49 +1,59 @@
 module Navigation
 
+open Feliz.Router
+
 [<RequireQualifiedAccess>]
 type Page =
     | Homepage
-    | TableOfContents
-    | DocPage of Documentation.Page
+    | Docs
+    | DocsEntry of Documentation.Entry
+    | Playground of data: string option
     | NotFound
 
 [<RequireQualifiedAccess>]
 module Page =
-    let fromUrl docPages url =
+    let fromUrl docEntries url =
         match url with
         | [] -> Page.Homepage
-        | [ "table-of-contents" ] -> Page.TableOfContents
-        | routeSegments ->
-            docPages
-            |> List.tryFind (fun (docPage: Documentation.Page) -> docPage.Route = routeSegments)
-            |> Option.map Page.DocPage
-            |> Option.defaultValue Page.NotFound
+        | [ "playground" ] -> Page.Playground None
+        | [ "playground"; Route.Query [ "data", dataUrl ] ] -> Page.Playground(Some dataUrl)
+        | "docs" :: routeSegments ->
+            match routeSegments with
+            | [] -> Page.Docs
+            | routeSegments ->
+                printfn "route segments %A" routeSegments
 
-type CurrentEntry =
-    | Entry of Documentation.Page
-    | NotViewingEntry
+                docEntries
+                |> List.tryFind (fun (entry: Documentation.Entry) -> entry.Route = routeSegments)
+                |> Option.map Page.DocsEntry
+                |> Option.defaultValue Page.NotFound
+        | _ -> Page.NotFound
+
+type NavigationEntry = { Title: string; Route: string list }
+
+[<RequireQualifiedAccess>]
+module NavigationEntry =
+    let fromDocEntry (docEntry: Documentation.Entry) = {
+        Title = docEntry.Title
+        Route = docEntry.Route
+    }
+
 
 type DocEntryNavigation = {
-    PreviousEntry: Documentation.Page option
-    NextEntry: Documentation.Page option
+    PreviousEntry: NavigationEntry option
+    NextEntry: NavigationEntry option
 }
 
-let getDocEntryNavigation (currentEntry: CurrentEntry) (allEntries: Documentation.Page list) =
-    let previous, next =
-        match currentEntry with
-        | NotViewingEntry ->
-            let previous = None
-            let next = List.tryItem 0 allEntries
+let getDocEntryNavigation (docPage: Documentation.Entry) (allEntries: Documentation.Entry list) =
+    let previousDocEntry, nextDocEntry =
+        match List.tryFindIndex (fun elem -> elem = docPage) allEntries with
+        | None -> None, None
+        | Some currentIndex ->
+            let previous = List.tryItem (currentIndex - 1) allEntries
+            let next = List.tryItem (currentIndex + 1) allEntries
             previous, next
-        | Entry entry ->
-            match List.tryFindIndex (fun elem -> elem = entry) allEntries with
-            | None -> None, None
-            | Some currentIndex ->
-                let previous = List.tryItem (currentIndex - 1) allEntries
-                let next = List.tryItem (currentIndex + 1) allEntries
-                previous, next
 
     {
-        PreviousEntry = previous
-        NextEntry = next
+        PreviousEntry = previousDocEntry |> Option.map NavigationEntry.fromDocEntry
+        NextEntry = nextDocEntry |> Option.map NavigationEntry.fromDocEntry
     }

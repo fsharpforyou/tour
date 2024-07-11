@@ -4,7 +4,7 @@
         {
             "title": "Basics",
             "route_segment": "basics",
-            "pages": [
+            "entries": [
                 {
                     "title": "Hello, World!",
                     "route_segment": "hello-world",
@@ -45,7 +45,7 @@
         {
             "title": "Functions",
             "route_segment": "functions",
-            "pages": [
+            "entries": [
                 {
                     "title": "Defining Functions",
                     "route_segment": "definition",
@@ -76,7 +76,7 @@
         {
             "title": "Data and Types",
             "route_segment": "data-and-types",
-            "pages": [
+            "entries": [
                 {
                     "title": "Tuples",
                     "route_segment": "tuples",
@@ -137,7 +137,7 @@
         {
             "title": "Object Programming",
             "route_segment": "object-programming",
-            "pages": [
+            "entries": [
                 {
                     "title": "Objects and Members",
                     "route_segment": "objects-and-members",

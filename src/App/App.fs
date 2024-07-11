@@ -15,8 +15,30 @@ open MonacoEditor
 open System
 open Feliz.UseMediaQuery
 
+let fsharpOptions = [|
+    "--define:FABLE_COMPILER"
+    "--define:FABLE_COMPILER_4"
+    "--define:FABLE_COMPILER_JAVASCRIPT"
+    "--langversion:preview"
+|]
+
+
+let monacoEditorOptions = {|
+    minimap = {| enabled = false |}
+    fontSize = 16
+    fontFamily = "JetBrains Mono" // TODO: I don't think this is working
+|}
+
 importSideEffects "react-toastify/dist/ReactToastify.css"
 importSideEffects "./monaco-vite.js"
+
+[<Erase>]
+type LzString =
+    [<Import("compressToEncodedURIComponent", "lz-string")>]
+    static member compressToEncodedURIComponent(input: string) : string = nativeOnly
+
+    [<Import("decompressFromEncodedURIComponent", "lz-string")>]
+    static member decompressFromEncodedURIComponent(compressed: string) : string = nativeOnly
 
 [<Erase>]
 type MonacoEditor =
@@ -26,6 +48,8 @@ type MonacoEditor =
     static member inline value(value: string) = Interop.mkAttr "value" value
     static member inline width(value: string) = Interop.mkAttr "width" value
     static member inline height(value: string) = Interop.mkAttr "height" value
+
+    static member inline options(value: obj) = Interop.mkAttr "options" value
 
     static member inline onMount(f: System.Func<Monaco.Editor.IStandaloneCodeEditor, Monaco.IExports, unit>) =
         Interop.mkAttr "onMount" f
@@ -60,33 +84,13 @@ module WebWorker =
         [ handler ]
 
 [<RequireQualifiedAccess>]
-module EditorInstance =
+module EditorUtils =
     [<RequireQualifiedAccess>]
     type LogLevel =
         | Log
         | Warn
         | Error
 
-    [<RequireQualifiedAccess>]
-    module LogLevel =
-        let toCssColor logLevel =
-            match logLevel with
-            | LogLevel.Log -> "inherit"
-            | LogLevel.Warn -> "darkorange"
-            | LogLevel.Error -> "red"
-
-        let fromCompilerError (error: Error) =
-            if error.IsWarning then LogLevel.Warn else LogLevel.Error
-
-    let toastNotificationFromErrors (errors: Error array) =
-        match errors with
-        | [||] -> Toastify.success "Compiled Successfully."
-        | _ -> Toastify.error "Failed to Compile."
-
-    let setModelMarkers (editor: Monaco.Editor.IStandaloneCodeEditor) (markers: Monaco.Editor.IMarkerData array) =
-        match editor.getModel () with
-        | None -> ()
-        | Some textModel -> Monaco.editor.setModelMarkers (textModel, "FSharpErrors", ResizeArray markers)
 
     type Model = {
         Logs: (string * LogLevel) list
@@ -94,6 +98,7 @@ module EditorInstance =
         CompiledJavaScript: string
         IFrameIdentifier: string
         IFrameUrl: string
+        PlaygroundUrl: string
         Worker: ObservableWorker<WorkerAnswer>
         Editor: Monaco.Editor.IStandaloneCodeEditor
         Markers: Monaco.Editor.IMarkerData array
@@ -112,48 +117,55 @@ module EditorInstance =
         | SetMarkers of Monaco.Editor.IMarkerData array
         | SetEditor of Monaco.Editor.IStandaloneCodeEditor
 
+    // TODO: move this to navigation???
+    let playgroundUrlComponents fsharpCode =
+        let data = LzString.compressToEncodedURIComponent fsharpCode
+        [ "playground"; $"?data={data}" ]
+
+    let createPlaygroundUrl fsharpCode =
+        Router.format (playgroundUrlComponents fsharpCode)
+
+    [<RequireQualifiedAccess>]
+    module LogLevel =
+        let toCssColor logLevel =
+            match logLevel with
+            | LogLevel.Log -> "inherit"
+            | LogLevel.Warn -> "darkorange"
+            | LogLevel.Error -> "red"
+
+        let fromCompilerError (error: Error) =
+            if error.IsWarning then LogLevel.Warn else LogLevel.Error
+
+
+    let setModelMarkers (editor: Monaco.Editor.IStandaloneCodeEditor) (markers: Monaco.Editor.IMarkerData array) =
+        match editor.getModel () with
+        | None -> ()
+        | Some textModel -> Monaco.editor.setModelMarkers (textModel, "FSharpErrors", ResizeArray markers)
+
+    let toastNotificationFromErrors (errors: Error array) =
+        match errors with
+        | [||] -> Toastify.success "Compiled Successfully."
+        | _ -> Toastify.error "Failed to Compile."
+
+    let initialCommand model =
+        Cmd.batch [
+            WebWorker.command Msg.SetMarkers Msg.Compiled model.Worker
+            Iframe.command model.IFrameIdentifier {
+                ConsoleLog = fun text -> Msg.AddConsoleLog(text, LogLevel.Log)
+                ConsoleWarn = fun text -> Msg.AddConsoleLog(text, LogLevel.Warn)
+                ConsoleError = fun text -> Msg.AddConsoleLog(text, LogLevel.Error)
+            }
+            Cmd.ofMsg Msg.ParseCode // NOTE: this may have terrible performance lol
+        ]
+
     let compile model =
-        let language = "javascript"
-        let fsharpOptions = [||]
-        CompileCode(model.FSharpCode, language, fsharpOptions) |> model.Worker.Post
-
-    let init initialFsharpCode =
-        fun () ->
-            let randomIdentifier = Guid.NewGuid().ToString()
-            let fsharpOptions = [| "--define:FABLE_COMPILER"; "--langversion:preview" |]
-
-            let worker =
-                ObservableWorker(WebWorker.create (), WorkerAnswer.Decoder, randomIdentifier)
-
-            CreateChecker(Constants.metadata, [||], Some ".txt", fsharpOptions)
-            |> worker.Post
-
-            {
-                Logs = []
-                FSharpCode = initialFsharpCode
-                CompiledJavaScript = ""
-                IFrameIdentifier = randomIdentifier
-                IFrameUrl = ""
-                Worker = worker
-                Editor = Unchecked.defaultof<_>
-                Markers = [||]
-                Debouncer = Debouncer.create ()
-            },
-            Cmd.batch [
-                WebWorker.command Msg.SetMarkers Msg.Compiled worker
-                Iframe.command randomIdentifier {
-                    ConsoleLog = fun text -> Msg.AddConsoleLog(text, LogLevel.Log)
-                    ConsoleWarn = fun text -> Msg.AddConsoleLog(text, LogLevel.Warn)
-                    ConsoleError = fun text -> Msg.AddConsoleLog(text, LogLevel.Error)
-                }
-                Cmd.ofMsg Msg.ParseCode // NOTE: this may have terrible performance lol
-            ]
+        CompileCode(model.FSharpCode, "javascript", fsharpOptions) |> model.Worker.Post
 
     let update msg model =
         match msg with
         | Msg.Compile -> { model with Logs = [] }, Cmd.ofEffect (fun _ -> compile model)
         | Msg.ParseCode ->
-            model, Cmd.ofEffect (fun _ -> WorkerRequest.ParseCode(model.FSharpCode, [||]) |> model.Worker.Post)
+            model, Cmd.ofEffect (fun _ -> WorkerRequest.ParseCode(model.FSharpCode, fsharpOptions) |> model.Worker.Post)
         | Msg.SetIFrameUrl url -> { model with IFrameUrl = url }, Cmd.none
         | Msg.SetEditor editor -> { model with Editor = editor }, Cmd.none
         | Msg.AddConsoleLog(logText, logLevel) ->
@@ -171,6 +183,7 @@ module EditorInstance =
             {
                 model with
                     FSharpCode = code
+                    PlaygroundUrl = createPlaygroundUrl code // TODO: ??? do we want to do this every time you type?
                     Debouncer = debouncerModel
             },
             Cmd.map Msg.DebouncerSelfMsg debouncerCmd
@@ -207,30 +220,55 @@ module EditorInstance =
             },
             debouncerCmd
 
+    let init worker initialFsharpCode =
+        fun () ->
+            let randomIdentifier = Guid.NewGuid().ToString()
+
+            let model = {
+                Logs = []
+                FSharpCode = initialFsharpCode
+                CompiledJavaScript = ""
+                IFrameIdentifier = randomIdentifier
+                IFrameUrl = ""
+                PlaygroundUrl = createPlaygroundUrl initialFsharpCode
+                Worker = worker
+                Editor = Unchecked.defaultof<_>
+                Markers = [||]
+                Debouncer = Debouncer.create ()
+            }
+
+            model, Cmd.batch [ initialCommand model ]
+
+[<RequireQualifiedAccess>]
+module Playground =
     [<ReactComponent>]
-    let Component initialFsharpCode =
-        let model, dispatch = React.useElmish (init initialFsharpCode, update)
+    let Component worker initialFSharpCode =
+        let model, dispatch =
+            React.useElmish (EditorUtils.init worker initialFSharpCode, EditorUtils.update)
 
         Html.div [
-            Html.i [
-                prop.style [ style.float'.right; style.color "green" ]
-                prop.className "fa-solid fa-play"
-                prop.onClick (fun _ -> dispatch Msg.Compile)
+            Html.button [
+                prop.text "Compile"
+                prop.onClick (fun _ -> dispatch EditorUtils.Msg.Compile)
             ]
-            //Html.button [ prop.text "Compile"; prop.onClick (fun _ -> dispatch Msg.Compile) ]
-            // Html.a [
-            //     prop.href "/#/playground/#/"
-            //     prop.children [ Html.i [ prop.className "fa-solid fa-flask" ] ]
-            // ]
-
+            Html.button [
+                prop.text "Share"
+                prop.onClick (fun _ ->
+                    Router.nav
+                        (EditorUtils.playgroundUrlComponents model.FSharpCode)
+                        HistoryMode.PushState
+                        RouteMode.Hash)
+            ]
             MonacoEditor.editor [
-                MonacoEditor.height "350px"
-                prop.className "monaco-editor"
+                MonacoEditor.height "1000px"
                 MonacoEditor.defaultLanguage "fsharp"
                 MonacoEditor.value model.FSharpCode
                 MonacoEditor.theme "vs"
-                MonacoEditor.onChange (Msg.SetFSharpCode >> dispatch)
-                MonacoEditor.onMount (Editor.onFSharpEditorDidMount model.Worker (Msg.SetEditor >> dispatch))
+                MonacoEditor.onChange (EditorUtils.Msg.SetFSharpCode >> dispatch)
+                MonacoEditor.options monacoEditorOptions
+                MonacoEditor.onMount (
+                    Editor.onFSharpEditorDidMount model.Worker (EditorUtils.Msg.SetEditor >> dispatch)
+                )
             ]
             match model.Logs with
             | [] -> Html.none
@@ -238,9 +276,11 @@ module EditorInstance =
                 Html.article [
                     prop.style [ style.height (length.percent 30); style.overflow.scroll ]
                     prop.children [
-                        // Html.h4 "Output"
                         for (log, level) in logs do
-                            Html.p [ prop.style [ style.color (LogLevel.toCssColor level) ]; prop.text log ]
+                            Html.p [
+                                prop.style [ style.color (EditorUtils.LogLevel.toCssColor level) ]
+                                prop.text log
+                            ]
                     ]
                 ]
             Html.iframe [
@@ -256,227 +296,277 @@ module EditorInstance =
         ]
 
 [<RequireQualifiedAccess>]
+module DocumentationEditorInstance =
+    [<ReactComponent>]
+    let Component worker initialFsharpCode =
+        let model, dispatch =
+            React.useElmish (EditorUtils.init worker initialFsharpCode, EditorUtils.update)
+
+        Html.div [
+            Html.i [
+                prop.style [ style.float'.right; style.color "green" ]
+                prop.className "fa-solid fa-play"
+                prop.onClick (fun _ -> dispatch EditorUtils.Msg.Compile)
+            ]
+
+            MonacoEditor.editor [
+                MonacoEditor.height "350px"
+                MonacoEditor.defaultLanguage "fsharp"
+                MonacoEditor.value model.FSharpCode
+                MonacoEditor.theme "vs"
+                MonacoEditor.onChange (EditorUtils.Msg.SetFSharpCode >> dispatch)
+                MonacoEditor.options monacoEditorOptions
+                MonacoEditor.onMount (
+                    Editor.onFSharpEditorDidMount model.Worker (EditorUtils.Msg.SetEditor >> dispatch)
+                )
+            ]
+            match model.Logs with
+            | [] -> Html.none
+            | logs ->
+                Html.hr []
+
+                Html.div [
+                    prop.style [ style.height (length.percent 30); style.overflow.scroll ]
+                    prop.children [
+                        for (log, level) in logs do
+                            Html.p [
+                                prop.style [ style.color (EditorUtils.LogLevel.toCssColor level) ]
+                                prop.text log
+                            ]
+                    ]
+                ]
+
+                Html.hr []
+
+            Html.a [
+                prop.href (EditorUtils.createPlaygroundUrl model.FSharpCode)
+                prop.text "Open in Playground"
+            ]
+
+            Html.iframe [
+                prop.id model.IFrameIdentifier
+                prop.src model.IFrameUrl
+                prop.style [
+                    style.position.absolute
+                    style.width 0
+                    style.height 0
+                    style.border (0, borderStyle.hidden, "")
+                ]
+            ]
+        ]
+
+[<RequireQualifiedAccess>]
+module Documentation =
+    [<RequireQualifiedAccess>]
+    type CurrentEntry =
+        | Root
+        | Entry of Documentation.Entry
+
+    let private formatDocRoute (route: string list) = Router.format ("docs" :: route)
+
+    [<ReactComponent>]
+    let Component worker currentEntry tableOfContents =
+        let allEntries = Documentation.TableOfContents.allEntries tableOfContents
+
+        let markdownDocumentation, githubUrl, docEntryNavigation =
+            match currentEntry with
+            | CurrentEntry.Root ->
+                tableOfContents.RootMarkdown,
+                tableOfContents.RootGitHubUrl,
+                {
+                    PreviousEntry = None
+                    NextEntry = allEntries |> List.tryHead |> Option.map NavigationEntry.fromDocEntry
+                }
+            | CurrentEntry.Entry entry ->
+                let navigation =
+                    match getDocEntryNavigation entry allEntries with
+                    | {
+                          PreviousEntry = None
+                          NextEntry = nextEntry
+                      } -> {
+                        PreviousEntry = Some { Title = "Cover"; Route = [] }
+                        NextEntry = nextEntry
+                      }
+                    | navigation -> navigation
+
+                entry.MarkdownDocumentation, entry.GitHubUrl, navigation
+
+        Html.div [
+            prop.style [
+                style.display.grid
+                style.gridTemplateAreas [| "sidebar"; "markdown" |]
+                style.gridTemplateRows [| length.percent 100 |]
+                style.gridTemplateColumns [| length.percent 20; length.percent 80 |]
+            ]
+            prop.children [
+                Html.aside [
+                    prop.style [ style.gridArea "sidebar" ]
+                    prop.children [
+                        Html.nav [
+                            for category in tableOfContents.Categories do
+                                Html.details [
+                                    Html.summary [ Html.strong category.Title ]
+                                    Html.ul [
+                                        for entry in category.Entries do
+                                            Html.li [
+                                                Html.a [ prop.href (formatDocRoute entry.Route); prop.text entry.Title ]
+                                            ]
+                                    ]
+                                ]
+                        ]
+                    ]
+                ]
+                Html.section [
+                    prop.id "markdown-content"
+                    prop.className "container-fluid"
+                    prop.style [ style.gridArea "markdown" ]
+                    prop.children [
+                        Markdown.markdown [
+                            markdown.children markdownDocumentation
+                            markdown.components [
+                                markdown.components.pre (fun props -> React.fragment props.children) // This doesn't wrap our editor instance in a `pre`
+                                markdown.components.code (fun props ->
+                                    if props.isInline then
+                                        Html.code props.children
+                                    else
+                                        // this is an interesting way to get the value of a code block
+                                        props.children
+                                        |> Seq.tryHead
+                                        |> Option.map (string >> DocumentationEditorInstance.Component worker)
+                                        |> Option.defaultValue Html.none)
+                            ]
+                        ]
+
+                        Html.nav [
+                            Html.ul [
+                                match docEntryNavigation.PreviousEntry with
+                                | None -> Html.none
+                                | Some entry ->
+                                    Html.li [
+                                        Html.a [ prop.href (formatDocRoute entry.Route); prop.text $"< {entry.Title}" ]
+                                    ]
+
+                                match docEntryNavigation.NextEntry with
+                                | None -> Html.none
+                                | Some entry ->
+                                    Html.li [
+                                        Html.a [ prop.href (formatDocRoute entry.Route); prop.text $"{entry.Title} >" ]
+                                    ]
+                            ]
+                        ]
+
+                        Html.a [
+                            prop.target.blank
+                            prop.href githubUrl
+                            prop.children [ Html.small "Edit This Page on GitHub" ]
+                        ]
+
+                    ]
+                ]
+            ]
+        ]
+
+[<RequireQualifiedAccess>]
 module App =
     type Model = {
-        Markdown: string
-        TableOfContents: Documentation.TableOfContents
+        CurrentUrl: string list
         CurrentPage: Navigation.Page
-        DocEntryNavigation: DocEntryNavigation
+        TableOfContents: Documentation.TableOfContents
+        Worker: ObservableWorker<WorkerAnswer>
     }
 
     [<RequireQualifiedAccess>]
     type Msg =
-        | SetMarkdown of string
-        | FetchedTableOfContents of Documentation.TableOfContents
         | SetUrl of string list
-        | GetMarkdownValue
-        | GetDocEntryNavigation
+        | FetchedTableOfContents of Documentation.TableOfContents
 
-    let private getCurrentPage tableOfContents url =
-        let docPages = Documentation.TableOfContents.allPages tableOfContents
-        Page.fromUrl docPages url
-
-    let (|DesktopSize|MobileSize|) (screenSize: ScreenSize) =
-        match screenSize with
-        | ScreenSize.Desktop
-        | ScreenSize.WideScreen -> DesktopSize
-        | ScreenSize.Tablet
-        | ScreenSize.Mobile
-        | ScreenSize.MobileLandscape -> MobileSize
-
-    let calculateMarkdownValue (tableOfContents: Documentation.TableOfContents) currentPage =
-        match currentPage with
-        | Page.DocPage docPage -> docPage.MarkdownDocumentation
-        | Page.NotFound
-        | Page.Homepage -> tableOfContents.RootMarkdown
-        | Page.TableOfContents -> Documentation.TableOfContents.toMarkdownString tableOfContents
-
-    let scrollToTopOfMarkdown () =
-        let markdownElement = document.getElementById "markdown-content"
-        markdownElement.scrollTo (0, 0)
-
-    let mobileNavbar =
-        Html.ul [ Html.li [ Html.a [ prop.href (Router.format []); prop.text "F# For You" ] ] ]
-
-    let imageLink href src text =
-        Html.a [
-            prop.href href
-            prop.target "_blank"
-            prop.children [
-                Html.img [
-                    prop.src src
-                    prop.width 40
-                    prop.height 40
-                    prop.style [ style.marginRight (length.px 5) ]
-                ]
-                Html.small (text: string)
-            ]
-        ]
-
-    let desktopNavbar = [
-        Html.ul [ Html.li [ imageLink (Router.format []) "img/fsharp.png" "F# For You!" ] ]
-
-        Html.ul [
-            Html.li [ imageLink "https://fable.io" "img/fable.png" "Powered by Fable" ]
-            Html.li [
-                imageLink "https://github.com/fsharpforyou/tour" "img/github.png" "View Source Code"
-            ]
-        ]
-    ]
+    let getPageFromUrl tableOfContents url =
+        Page.fromUrl (Documentation.TableOfContents.allEntries tableOfContents) url
 
     let init () =
-        let currentUrl = Router.currentUrl ()
         let tableOfContents = Documentation.emptyTableOfContents
-        let currentPage = getCurrentPage tableOfContents currentUrl
+        let worker = ObservableWorker(WebWorker.create (), WorkerAnswer.Decoder, "MAIN APP")
 
         {
-            Markdown = ""
+            CurrentUrl = []
+            CurrentPage = Page.Homepage
             TableOfContents = tableOfContents
-            CurrentPage = currentPage
-            DocEntryNavigation = {
-                PreviousEntry = None
-                NextEntry = None
-            }
+            Worker = worker
         },
-        Cmd.OfPromise.perform Documentation.loadTableOfContents () Msg.FetchedTableOfContents
+        Cmd.batch [
+            Cmd.OfPromise.perform Documentation.loadTableOfContents () Msg.FetchedTableOfContents
+            Cmd.ofEffect (fun _ ->
+                CreateChecker(Constants.metadata, [||], Some ".txt", fsharpOptions)
+                |> worker.Post)
+        ]
 
     let update msg model =
         match msg with
-        | Msg.SetMarkdown doc -> { model with Markdown = doc }, Cmd.none
+        | Msg.SetUrl url ->
+            let currentPage = getPageFromUrl model.TableOfContents url
+
+            {
+                model with
+                    CurrentUrl = url
+                    CurrentPage = currentPage
+            },
+            Cmd.none
         | Msg.FetchedTableOfContents tableOfContents ->
-            let url = Router.currentUrl ()
-            let currentPage = getCurrentPage tableOfContents url
+            let currentPage = getPageFromUrl tableOfContents model.CurrentUrl
 
             {
                 model with
                     CurrentPage = currentPage
                     TableOfContents = tableOfContents
             },
-            Cmd.batch [ Cmd.ofMsg Msg.GetMarkdownValue; Cmd.ofMsg Msg.GetDocEntryNavigation ]
-        | Msg.SetUrl url ->
-            let currentPage = getCurrentPage model.TableOfContents url
-
-            { model with CurrentPage = currentPage },
-            Cmd.batch [ Cmd.ofMsg Msg.GetMarkdownValue; Cmd.ofMsg Msg.GetDocEntryNavigation ]
-        | Msg.GetMarkdownValue ->
-            let markdown = calculateMarkdownValue model.TableOfContents model.CurrentPage
-            { model with Markdown = markdown }, Cmd.batch [ Cmd.ofEffect (fun _ -> scrollToTopOfMarkdown ()) ]
-        | Msg.GetDocEntryNavigation ->
-            let allEntries = Documentation.TableOfContents.allPages model.TableOfContents
-
-            let currentEntry =
-                match model.CurrentPage with
-                | Page.DocPage docPage -> Entry docPage
-                | _ -> NotViewingEntry
-
-            {
-                model with
-                    DocEntryNavigation = getDocEntryNavigation currentEntry allEntries
-            },
             Cmd.none
 
+    // TODO: Render "Root markdown" if you're on the /docs/ page
     [<ReactComponent>]
     let Component () =
         let model, dispatch = React.useElmish (init, update)
-        let screenSize = React.useResponsive Breakpoints.defaults
 
         React.router [
             router.onUrlChanged (Msg.SetUrl >> dispatch)
             router.children [
-                Html.main [
-                    Html.header [
+                Html.header [
+                    prop.className "container-fluid"
+                    prop.children [
                         Html.nav [
-                            match screenSize with
-                            | MobileSize -> mobileNavbar
-                            | DesktopSize -> yield! desktopNavbar
-                        ]
-                    ]
-                    Html.div [
-                        prop.style [
-                            style.display.grid
-                            style.gridTemplateAreas [| "sidebar"; "markdown" |]
-                            style.gridTemplateRows [| length.percent 100 |]
-                            style.gridTemplateColumns [| length.percent 20; length.percent 80 |]
-                        ]
-                        prop.children [
-                            Html.aside [
-                                prop.style [ style.gridArea "sidebar" ]
-                                prop.children [
-                                    Html.nav [
-                                        for category in model.TableOfContents.Categories do
-                                            Html.details [
-                                                Html.summary [ Html.strong category.Title ]
-                                                Html.ul [
-                                                    for page in category.Pages do
-                                                        Html.li [
-                                                            Html.a [
-                                                                prop.href (Router.format page.Route)
-                                                                prop.text page.Title
-                                                            ]
-                                                        ]
-                                                ]
-                                            ]
-                                    ]
-                                ]
-                            ]
-                            Html.section [
-                                prop.id "markdown-content"
-                                prop.className "container-fluid"
-                                prop.style [ style.gridArea "markdown" ]
-                                prop.children [
-                                    Markdown.markdown [
-                                        markdown.children model.Markdown
-                                        markdown.components [
-                                            markdown.components.pre (fun props -> React.fragment props.children) // This doesn't wrap our editor instance in a `pre`
-                                            markdown.components.code (fun props ->
-                                                if props.isInline then
-                                                    Html.code props.children
-                                                else
-                                                    // this is an interesting way to get the value of a code block
-                                                    props.children
-                                                    |> Seq.tryHead
-                                                    |> Option.map (string >> EditorInstance.Component)
-                                                    |> Option.defaultValue Html.none)
-                                        ]
-                                    ]
-
-                                    Html.nav [
-                                        Html.ul [
-                                            match model.DocEntryNavigation.PreviousEntry with
-                                            | None -> Html.none
-                                            | Some entry ->
-                                                Html.li [
-                                                    Html.a [
-                                                        prop.href (Router.format entry.Route)
-                                                        prop.text $"< {entry.Title}"
-                                                    ]
-                                                ]
-                                            Html.li [
-                                                Html.a [
-                                                    prop.href (Router.format [ "table-of-contents" ])
-                                                    prop.text "Table of Contents"
-                                                ]
-                                            ]
-                                            match model.DocEntryNavigation.NextEntry with
-                                            | None -> Html.none
-                                            | Some entry ->
-                                                Html.li [
-                                                    Html.a [
-                                                        prop.href (Router.format entry.Route)
-                                                        prop.text $"{entry.Title} >"
-                                                    ]
-                                                ]
-                                        ]
-                                    ]
+                            Html.ul [ Html.li [ Html.a [ prop.href (Router.format []); prop.text "F# For You" ] ] ]
+                            Html.ul [
+                                Html.li [ Html.a [ prop.href (Router.format [ "docs" ]); prop.text "Docs" ] ]
+                                Html.li [
+                                    Html.a [ prop.href (Router.format [ "playground" ]); prop.text "Playground" ]
                                 ]
                             ]
                         ]
                     ]
                 ]
-                Toastify.container [
-                    ContainerOption.autoClose 2000
-                    ContainerOption.position Position.BottomRight
-                    ContainerOption.theme Theme.Light
+                Html.main [
+                    match model.CurrentPage with
+                    | Page.Docs ->
+                        Documentation.Component model.Worker Documentation.CurrentEntry.Root model.TableOfContents
+                    | Page.DocsEntry entry ->
+                        Documentation.Component
+                            model.Worker
+                            (Documentation.CurrentEntry.Entry entry)
+                            model.TableOfContents
+                    | Page.Homepage -> Html.p "Homepage"
+                    | Page.Playground data ->
+                        let initialCode =
+                            data
+                            |> Option.map LzString.decompressFromEncodedURIComponent
+                            |> Option.defaultValue ""
+
+                        Playground.Component model.Worker initialCode
+                    | Page.NotFound -> Html.p "Not found"
+
+                    Toastify.container [
+                        ContainerOption.autoClose 2000
+                        ContainerOption.position Position.BottomRight
+                        ContainerOption.theme Theme.Light
+                    ]
                 ]
             ]
         ]

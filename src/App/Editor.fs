@@ -234,6 +234,7 @@ let createTooltipProvider getTooltip =
                         jsOptions<Monaco.Languages.Hover> (fun h ->
                             h.contents <-
                                 lines
+                                |> Seq.distinct // I'm not sure why this is required but I'm getting duplicate entries in the tooltip
                                 |> Seq.map Tooltip.replaceXml
                                 |> Seq.mapi (fun i line ->
                                     {|
