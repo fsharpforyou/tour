@@ -155,7 +155,7 @@ module EditorUtils =
                 ConsoleWarn = fun text -> Msg.AddConsoleLog(text, LogLevel.Warn)
                 ConsoleError = fun text -> Msg.AddConsoleLog(text, LogLevel.Error)
             }
-            Cmd.ofMsg Msg.ParseCode // NOTE: this may have terrible performance lol
+            Cmd.ofMsg Msg.ParseCode
         ]
 
     let compile model =
@@ -220,9 +220,15 @@ module EditorUtils =
             },
             debouncerCmd
 
-    let init worker initialFsharpCode =
+    let init initialFsharpCode =
         fun () ->
             let randomIdentifier = Guid.NewGuid().ToString()
+
+            let worker =
+                ObservableWorker(WebWorker.create (), WorkerAnswer.Decoder, randomIdentifier)
+
+            CreateChecker(Constants.metadata, [||], Some ".txt", fsharpOptions)
+            |> worker.Post
 
             let model = {
                 Logs = []
@@ -242,9 +248,9 @@ module EditorUtils =
 [<RequireQualifiedAccess>]
 module Playground =
     [<ReactComponent>]
-    let Component worker initialFSharpCode =
+    let Component initialFSharpCode =
         let model, dispatch =
-            React.useElmish (EditorUtils.init worker initialFSharpCode, EditorUtils.update)
+            React.useElmish (EditorUtils.init initialFSharpCode, EditorUtils.update)
 
         Html.div [
             Html.button [
@@ -298,9 +304,9 @@ module Playground =
 [<RequireQualifiedAccess>]
 module DocumentationEditorInstance =
     [<ReactComponent>]
-    let Component worker initialFsharpCode =
+    let Component initialFsharpCode =
         let model, dispatch =
-            React.useElmish (EditorUtils.init worker initialFsharpCode, EditorUtils.update)
+            React.useElmish (EditorUtils.init initialFsharpCode, EditorUtils.update)
 
         Html.div [
             Html.i [
@@ -365,7 +371,7 @@ module Documentation =
     let private formatDocRoute (route: string list) = Router.format ("docs" :: route)
 
     [<ReactComponent>]
-    let Component worker currentEntry tableOfContents =
+    let Component currentEntry tableOfContents =
         let allEntries = Documentation.TableOfContents.allEntries tableOfContents
 
         let markdownDocumentation, githubUrl, docEntryNavigation =
@@ -432,7 +438,7 @@ module Documentation =
                                         // this is an interesting way to get the value of a code block
                                         props.children
                                         |> Seq.tryHead
-                                        |> Option.map (string >> DocumentationEditorInstance.Component worker)
+                                        |> Option.map (string >> DocumentationEditorInstance.Component)
                                         |> Option.defaultValue Html.none)
                             ]
                         ]
@@ -472,7 +478,6 @@ module App =
         CurrentUrl: string list
         CurrentPage: Navigation.Page
         TableOfContents: Documentation.TableOfContents
-        Worker: ObservableWorker<WorkerAnswer>
     }
 
     [<RequireQualifiedAccess>]
@@ -485,20 +490,13 @@ module App =
 
     let init () =
         let tableOfContents = Documentation.emptyTableOfContents
-        let worker = ObservableWorker(WebWorker.create (), WorkerAnswer.Decoder, "MAIN APP")
 
         {
             CurrentUrl = []
             CurrentPage = Page.Homepage
             TableOfContents = tableOfContents
-            Worker = worker
         },
-        Cmd.batch [
-            Cmd.OfPromise.perform Documentation.loadTableOfContents () Msg.FetchedTableOfContents
-            Cmd.ofEffect (fun _ ->
-                CreateChecker(Constants.metadata, [||], Some ".txt", fsharpOptions)
-                |> worker.Post)
-        ]
+        Cmd.OfPromise.perform Documentation.loadTableOfContents () Msg.FetchedTableOfContents
 
     let update msg model =
         match msg with
@@ -545,13 +543,9 @@ module App =
                 ]
                 Html.main [
                     match model.CurrentPage with
-                    | Page.Docs ->
-                        Documentation.Component model.Worker Documentation.CurrentEntry.Root model.TableOfContents
+                    | Page.Docs -> Documentation.Component Documentation.CurrentEntry.Root model.TableOfContents
                     | Page.DocsEntry entry ->
-                        Documentation.Component
-                            model.Worker
-                            (Documentation.CurrentEntry.Entry entry)
-                            model.TableOfContents
+                        Documentation.Component (Documentation.CurrentEntry.Entry entry) model.TableOfContents
                     | Page.Homepage -> Html.p "Homepage"
                     | Page.Playground data ->
                         let initialCode =
@@ -559,7 +553,7 @@ module App =
                             |> Option.map LzString.decompressFromEncodedURIComponent
                             |> Option.defaultValue ""
 
-                        Playground.Component model.Worker initialCode
+                        Playground.Component initialCode
                     | Page.NotFound -> Html.p "Not found"
 
                     Toastify.container [
