@@ -20,7 +20,7 @@ let command (iframeId: string) (args: MessageArgs<'Msg>) =
             fun ev ->
                 let iframeElement = document.getElementById iframeId
 
-                if ev?source = iframeElement?contentWindow then
+                if iframeElement <> null && ev?source = iframeElement?contentWindow then
                     let iframeMessageDecoder =
                         Decode.field "type" Decode.string
                         |> Decode.option
