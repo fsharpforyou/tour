@@ -26,7 +26,7 @@ let fsharpOptions = [|
 let monacoEditorOptions = {|
     minimap = {| enabled = false |}
     fontSize = 16
-    fontFamily = "JetBrains Mono" // TODO: I don't think this is working
+    fontFamily = "JetBrains Mono"
 |}
 
 importSideEffects "react-toastify/dist/ReactToastify.css"
@@ -432,7 +432,7 @@ module Documentation =
                             markdown.components [
                                 markdown.components.pre (fun props -> React.fragment props.children) // This doesn't wrap our editor instance in a `pre`
                                 markdown.components.code (fun props ->
-                                    if props.isInline then
+                                    if props.isInline || props.className <> "language-fsharp" then
                                         Html.code props.children
                                     else
                                         // this is an interesting way to get the value of a code block
