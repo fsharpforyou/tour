@@ -6,7 +6,7 @@
   },
   "dependencies": {
     "@fable-org/fable-metadata": "^1.1.0",
-    "@fable-org/fable-standalone": "^1.8.1",
+    "@fable-org/fable-standalone": "^1.9.0",
     "@monaco-editor/react": "^4.6.0",
     "lz-string": "^1.5.0",
     "monaco-editor": "^0.46.0",
