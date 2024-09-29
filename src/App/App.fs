@@ -136,7 +136,6 @@ module EditorUtils =
         let fromCompilerError (error: Error) =
             if error.IsWarning then LogLevel.Warn else LogLevel.Error
 
-
     let setModelMarkers (editor: Monaco.Editor.IStandaloneCodeEditor) (markers: Monaco.Editor.IMarkerData array) =
         match editor.getModel () with
         | None -> ()
@@ -144,8 +143,9 @@ module EditorUtils =
 
     let toastNotificationFromErrors (errors: Error array) =
         match errors with
-        | [||] -> Toastify.success "Compiled Successfully."
-        | _ -> Toastify.error "Failed to Compile."
+        | [||] -> Toastify.success "Compiled successfully."
+        | errors when errors |> Array.forall _.IsWarning -> Toastify.warn "Compiled with warnings."
+        | _ -> Toastify.error "Failed to compile."
 
     let initialCommand model =
         Cmd.batch [
@@ -248,55 +248,55 @@ module EditorUtils =
 [<RequireQualifiedAccess>]
 module Playground =
     [<ReactComponent>]
-    let Component initialFSharpCode =
+    let Component editorTheme initialFSharpCode =
         let model, dispatch =
             React.useElmish (EditorUtils.init initialFSharpCode, EditorUtils.update)
 
         Html.div [
-            Html.button [
-                prop.text "Compile"
-                prop.onClick (fun _ -> dispatch EditorUtils.Msg.Compile)
-            ]
-            Html.button [
-                prop.text "Share"
-                prop.onClick (fun _ ->
-                    Router.nav
-                        (EditorUtils.playgroundUrlComponents model.FSharpCode)
-                        HistoryMode.PushState
-                        RouteMode.Hash)
-            ]
-            MonacoEditor.editor [
-                MonacoEditor.height "1000px"
-                MonacoEditor.defaultLanguage "fsharp"
-                MonacoEditor.value model.FSharpCode
-                MonacoEditor.theme "vs"
-                MonacoEditor.onChange (EditorUtils.Msg.SetFSharpCode >> dispatch)
-                MonacoEditor.options monacoEditorOptions
-                MonacoEditor.onMount (
-                    Editor.onFSharpEditorDidMount model.Worker (EditorUtils.Msg.SetEditor >> dispatch)
-                )
-            ]
-            match model.Logs with
-            | [] -> Html.none
-            | logs ->
-                Html.article [
-                    prop.style [ style.height (length.percent 30); style.overflow.scroll ]
+            prop.className "playground"
+            prop.children [
+                Html.aside [
+                    prop.className "sidebar"
                     prop.children [
-                        for (log, level) in logs do
-                            Html.p [
-                                prop.style [ style.color (EditorUtils.LogLevel.toCssColor level) ]
-                                prop.text log
-                            ]
+                        Html.button [
+                            prop.onClick (fun _ -> dispatch EditorUtils.Msg.Compile)
+                            prop.children [ Html.i [ prop.className "fa-solid fa-play" ] ]
+                        ]
+                        Html.button [
+                            prop.onClick (fun _ ->
+                                Router.nav
+                                    (EditorUtils.playgroundUrlComponents model.FSharpCode)
+                                    HistoryMode.PushState
+                                    RouteMode.Hash)
+                            prop.children [ Html.i [ prop.className "fa-solid fa-share-from-square" ] ]
+                        ]
+                        // TODO: Implement this (clear playground)
+                        Html.button [ Html.i [ prop.className "fa-solid fa-trash" ] ]
                     ]
                 ]
-            Html.iframe [
-                prop.id model.IFrameIdentifier
-                prop.src model.IFrameUrl
-                prop.style [
-                    style.position.absolute
-                    style.width 0
-                    style.height 0
-                    style.border (0, borderStyle.hidden, "")
+                Html.section [
+                    prop.className "editor-group"
+                    prop.children [
+                        MonacoEditor.editor [
+                            MonacoEditor.height "1000px"
+                            MonacoEditor.defaultLanguage "fsharp"
+                            MonacoEditor.value model.FSharpCode
+                            MonacoEditor.theme editorTheme
+                            MonacoEditor.onChange (EditorUtils.Msg.SetFSharpCode >> dispatch)
+                            MonacoEditor.options monacoEditorOptions
+                            MonacoEditor.onMount (
+                                Editor.onFSharpEditorDidMount model.Worker (EditorUtils.Msg.SetEditor >> dispatch)
+                            )
+                        ]
+                        match model.Logs with
+                        | [] -> Html.none
+                        | logs ->
+                            Html.article [
+                                for (log, level) in logs do
+                                    Html.p [ prop.text log ]
+                            ]
+                        Html.iframe [ prop.id model.IFrameIdentifier; prop.src model.IFrameUrl ]
+                    ]
                 ]
             ]
         ]
@@ -304,60 +304,82 @@ module Playground =
 [<RequireQualifiedAccess>]
 module DocumentationEditorInstance =
     [<ReactComponent>]
-    let Component initialFsharpCode =
+    let Component editorTheme initialFsharpCode =
+        let isOutputExpanded, setOutputExpanded = React.useState false
+
         let model, dispatch =
             React.useElmish (EditorUtils.init initialFsharpCode, EditorUtils.update)
 
         Html.div [
-            Html.i [
-                prop.style [ style.float'.right; style.color "green" ]
-                prop.className "fa-solid fa-play"
-                prop.onClick (fun _ -> dispatch EditorUtils.Msg.Compile)
-            ]
-
-            MonacoEditor.editor [
-                MonacoEditor.height "350px"
-                MonacoEditor.defaultLanguage "fsharp"
-                MonacoEditor.value model.FSharpCode
-                MonacoEditor.theme "vs"
-                MonacoEditor.onChange (EditorUtils.Msg.SetFSharpCode >> dispatch)
-                MonacoEditor.options monacoEditorOptions
-                MonacoEditor.onMount (
-                    Editor.onFSharpEditorDidMount model.Worker (EditorUtils.Msg.SetEditor >> dispatch)
-                )
-            ]
-            match model.Logs with
-            | [] -> Html.none
-            | logs ->
-                Html.hr []
-
+            prop.className "editor-group"
+            prop.children [
+                MonacoEditor.editor [
+                    MonacoEditor.height "350px"
+                    MonacoEditor.defaultLanguage "fsharp"
+                    MonacoEditor.value model.FSharpCode
+                    MonacoEditor.theme editorTheme
+                    MonacoEditor.onChange (EditorUtils.Msg.SetFSharpCode >> dispatch)
+                    MonacoEditor.options monacoEditorOptions
+                    MonacoEditor.onMount (
+                        Editor.onFSharpEditorDidMount model.Worker (EditorUtils.Msg.SetEditor >> dispatch)
+                    )
+                ]
                 Html.div [
-                    prop.style [ style.height (length.percent 30); style.overflow.scroll ]
+                    prop.className "output-group"
                     prop.children [
-                        for (log, level) in logs do
-                            Html.p [
-                                prop.style [ style.color (EditorUtils.LogLevel.toCssColor level) ]
-                                prop.text log
+                        if isOutputExpanded then
+                            Html.div [
+                                prop.className "output-logs"
+                                prop.children [
+                                    if List.isEmpty model.Logs then
+                                        Html.p "No output."
+                                    else
+                                        for (log, level) in model.Logs do
+                                            Html.p [
+                                                prop.className (
+                                                    match level with
+                                                    | EditorUtils.LogLevel.Log -> "log-level-success"
+                                                    | EditorUtils.LogLevel.Warn -> "log-level-warning"
+                                                    | EditorUtils.LogLevel.Error -> "log-level-error"
+                                                )
+                                                prop.text log
+                                            ]
+                                ]
                             ]
+                        else
+                            Html.none
+
+                        Html.div [
+                            prop.className "output-controls"
+                            prop.children [
+                                Html.div [
+                                    Html.p "Output"
+                                    Html.i [
+                                        prop.className (
+                                            if isOutputExpanded then
+                                                "fa-solid fa-caret-down"
+                                            else
+                                                "fa-solid fa-caret-up"
+                                        )
+                                        prop.onClick (fun _ -> setOutputExpanded (not isOutputExpanded))
+                                    ]
+                                ]
+                                Html.div [
+                                    Html.button [
+                                        prop.text "Compile"
+                                        prop.onClick (fun _ -> dispatch EditorUtils.Msg.Compile)
+                                    ]
+                                    Html.a [
+                                        prop.href (EditorUtils.createPlaygroundUrl model.FSharpCode)
+                                        prop.text "Open in Playground"
+                                    ]
+                                ]
+                            ]
+                        ]
                     ]
                 ]
 
-                Html.hr []
-
-            Html.a [
-                prop.href (EditorUtils.createPlaygroundUrl model.FSharpCode)
-                prop.text "Open in Playground"
-            ]
-
-            Html.iframe [
-                prop.id model.IFrameIdentifier
-                prop.src model.IFrameUrl
-                prop.style [
-                    style.position.absolute
-                    style.width 0
-                    style.height 0
-                    style.border (0, borderStyle.hidden, "")
-                ]
+                Html.iframe [ prop.id model.IFrameIdentifier; prop.src model.IFrameUrl ]
             ]
         ]
 
@@ -371,7 +393,7 @@ module Documentation =
     let private formatDocRoute (route: string list) = Router.format ("docs" :: route)
 
     [<ReactComponent>]
-    let Component currentEntry tableOfContents =
+    let Component editorTheme currentEntry tableOfContents =
         let allEntries = Documentation.TableOfContents.allEntries tableOfContents
 
         let markdownDocumentation, githubUrl, docEntryNavigation =
@@ -398,15 +420,10 @@ module Documentation =
                 entry.MarkdownDocumentation, entry.GitHubUrl, navigation
 
         Html.div [
-            prop.style [
-                style.display.grid
-                style.gridTemplateAreas [| "sidebar"; "markdown" |]
-                style.gridTemplateRows [| length.percent 100 |]
-                style.gridTemplateColumns [| length.percent 20; length.percent 80 |]
-            ]
+            prop.className "documentation"
             prop.children [
                 Html.aside [
-                    prop.style [ style.gridArea "sidebar" ]
+                    prop.className "sidebar"
                     prop.children [
                         Html.nav [
                             for category in tableOfContents.Categories do
@@ -423,13 +440,28 @@ module Documentation =
                     ]
                 ]
                 Html.section [
-                    prop.id "markdown-content"
-                    prop.className "container-fluid"
-                    prop.style [ style.gridArea "markdown" ]
+                    prop.className "markdown-content"
                     prop.children [
                         Markdown.markdown [
                             markdown.children markdownDocumentation
                             markdown.components [
+                                // Put the "edit on github" link below the title
+                                markdown.components.h1 (fun props ->
+                                    React.fragment [
+                                        Html.h1 props.children
+                                        Html.span [
+                                            prop.className "edit-this-page"
+                                            prop.children [
+                                                Html.i [ prop.className "fa-brands fa-github" ]
+                                                Html.a [
+                                                    prop.target.blank
+                                                    prop.href githubUrl
+                                                    prop.children [ Html.small "Edit This Page on GitHub" ]
+                                                ]
+                                            ]
+                                        ]
+                                    ])
+
                                 markdown.components.pre (fun props -> React.fragment props.children) // This doesn't wrap our editor instance in a `pre`
                                 markdown.components.code (fun props ->
                                     if props.isInline || props.className <> "language-fsharp" then
@@ -438,7 +470,7 @@ module Documentation =
                                         // this is an interesting way to get the value of a code block
                                         props.children
                                         |> Seq.tryHead
-                                        |> Option.map (string >> DocumentationEditorInstance.Component)
+                                        |> Option.map (string >> DocumentationEditorInstance.Component editorTheme)
                                         |> Option.defaultValue Html.none)
                             ]
                         ]
@@ -460,13 +492,6 @@ module Documentation =
                                     ]
                             ]
                         ]
-
-                        Html.a [
-                            prop.target.blank
-                            prop.href githubUrl
-                            prop.children [ Html.small "Edit This Page on GitHub" ]
-                        ]
-
                     ]
                 ]
             ]
@@ -474,9 +499,34 @@ module Documentation =
 
 [<RequireQualifiedAccess>]
 module App =
+    [<RequireQualifiedAccess>]
+    type Theme =
+        | Light
+        | Dark
+
+    [<RequireQualifiedAccess>]
+    module Theme =
+        let toString theme =
+            match theme with
+            | Theme.Light -> "light"
+            | Theme.Dark -> "dark"
+
+        let fromLocalStorage () =
+            match localStorage.getItem "theme" with
+            | "light" -> Theme.Light
+            | "dark"
+            | _ -> Theme.Dark
+
+        let saveToLocalStorage theme =
+            localStorage.setItem ("theme", toString theme)
+
+        let apply theme =
+            document.documentElement.setAttribute ("data-theme", toString theme)
+
     type Model = {
         CurrentUrl: string list
         CurrentPage: Navigation.Page
+        CurrentTheme: Theme
         TableOfContents: Documentation.TableOfContents
     }
 
@@ -484,19 +534,25 @@ module App =
     type Msg =
         | SetUrl of string list
         | FetchedTableOfContents of Documentation.TableOfContents
+        | ToggleTheme
 
     let getPageFromUrl tableOfContents url =
         Page.fromUrl (Documentation.TableOfContents.allEntries tableOfContents) url
 
     let init () =
+        let currentTheme = Theme.fromLocalStorage ()
         let tableOfContents = Documentation.emptyTableOfContents
 
         {
             CurrentUrl = []
             CurrentPage = Page.Homepage
+            CurrentTheme = currentTheme
             TableOfContents = tableOfContents
         },
-        Cmd.OfPromise.perform Documentation.loadTableOfContents () Msg.FetchedTableOfContents
+        Cmd.batch [
+            Cmd.ofEffect (fun _ -> Theme.apply currentTheme)
+            Cmd.OfPromise.perform Documentation.loadTableOfContents () Msg.FetchedTableOfContents
+        ]
 
     let update msg model =
         match msg with
@@ -518,24 +574,68 @@ module App =
                     TableOfContents = tableOfContents
             },
             Cmd.none
+        | Msg.ToggleTheme ->
+            let nextTheme =
+                match model.CurrentTheme with
+                | Theme.Light -> Theme.Dark
+                | Theme.Dark -> Theme.Light
 
-    // TODO: Render "Root markdown" if you're on the /docs/ page
+            { model with CurrentTheme = nextTheme },
+            Cmd.ofEffect (fun _ ->
+                Theme.saveToLocalStorage nextTheme
+                Theme.apply nextTheme)
+
     [<ReactComponent>]
     let Component () =
         let model, dispatch = React.useElmish (init, update)
+
+        let editorTheme =
+            match model.CurrentTheme with
+            | Theme.Light -> "vs"
+            | Theme.Dark -> "vs-dark"
 
         React.router [
             router.onUrlChanged (Msg.SetUrl >> dispatch)
             router.children [
                 Html.header [
-                    prop.className "container-fluid"
-                    prop.children [
-                        Html.nav [
-                            Html.ul [ Html.li [ Html.a [ prop.href (Router.format []); prop.text "F# For You" ] ] ]
-                            Html.ul [
-                                Html.li [ Html.a [ prop.href (Router.format [ "docs" ]); prop.text "Docs" ] ]
+                    Html.nav [
+                        Html.ul [
+                            prop.className "branding"
+                            prop.children [
                                 Html.li [
-                                    Html.a [ prop.href (Router.format [ "playground" ]); prop.text "Playground" ]
+                                    Html.img [ prop.src "img/fsharp.png" ]
+                                    Html.a [ prop.href (Router.format []); prop.text "F# For You" ]
+                                ]
+                            ]
+                        ]
+                        Html.ul [
+                            Html.li [ Html.a [ prop.href (Router.format [ "docs" ]); prop.text "Docs" ] ]
+                            Html.li [
+                                Html.a [ prop.href (Router.format [ "playground" ]); prop.text "Playground" ]
+                            ]
+                        ]
+                        Html.ul [
+                            Html.li [
+                                Html.button [
+                                    Html.a [
+                                        prop.target.blank
+                                        prop.href "https://github.com/fsharpforyou/tour"
+                                        prop.children [ Html.i [ prop.className "fa-brands fa-github" ] ]
+                                    ]
+                                ]
+                            ]
+                            Html.li [
+                                Html.button [
+                                    prop.onClick (fun _ -> dispatch Msg.ToggleTheme)
+                                    prop.children [
+                                        Html.i [
+                                            prop.className (
+                                                match model.CurrentTheme with
+                                                | Theme.Light -> "fa-solid fa-moon"
+                                                | Theme.Dark -> "fa-solid fa-sun"
+                                            )
+                                        ]
+                                    ]
                                 ]
                             ]
                         ]
@@ -543,9 +643,13 @@ module App =
                 ]
                 Html.main [
                     match model.CurrentPage with
-                    | Page.Docs -> Documentation.Component Documentation.CurrentEntry.Root model.TableOfContents
+                    | Page.Docs ->
+                        Documentation.Component editorTheme Documentation.CurrentEntry.Root model.TableOfContents
                     | Page.DocsEntry entry ->
-                        Documentation.Component (Documentation.CurrentEntry.Entry entry) model.TableOfContents
+                        Documentation.Component
+                            editorTheme
+                            (Documentation.CurrentEntry.Entry entry)
+                            model.TableOfContents
                     | Page.Homepage -> Html.p "Homepage"
                     | Page.Playground data ->
                         let initialCode =
@@ -553,13 +657,17 @@ module App =
                             |> Option.map LzString.decompressFromEncodedURIComponent
                             |> Option.defaultValue ""
 
-                        Playground.Component initialCode
+                        Playground.Component editorTheme initialCode
                     | Page.NotFound -> Html.p "Not found"
 
                     Toastify.container [
                         ContainerOption.autoClose 2000
                         ContainerOption.position Position.BottomRight
-                        ContainerOption.theme Theme.Light
+                        ContainerOption.theme (
+                            match model.CurrentTheme with
+                            | Theme.Light -> Fable.ReactToastify.Theme.Light
+                            | Theme.Dark -> Fable.ReactToastify.Theme.Dark
+                        )
                     ]
                 ]
             ]
