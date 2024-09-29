@@ -464,8 +464,10 @@ module Documentation =
 
                                 markdown.components.pre (fun props -> React.fragment props.children) // This doesn't wrap our editor instance in a `pre`
                                 markdown.components.code (fun props ->
-                                    if props.isInline || props.className <> "language-fsharp" then
+                                    if props.isInline then
                                         Html.code props.children
+                                    elif props.className <> "language-fsharp" then
+                                        Html.pre [ Html.code props.children ]
                                     else
                                         // this is an interesting way to get the value of a code block
                                         props.children
