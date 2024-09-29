@@ -1,0 +1,244 @@
+/*
+https://blog.logrocket.com/css-utility-classes-library-extendable-styles/
+https://dev.to/ananyaneogi/create-a-dark-light-mode-switch-with-css-variables-34l8
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+
+:root {
+    --background-color: #fff;
+    --header-background-color: #fff;
+    --header-border-color: #cccccc;
+    --code-background-color: #dddddd;
+    --text-color: #000;
+}
+
+[data-theme="dark"] {
+    --background-color: #1e1e1e;
+    --header-background-color: #1e1e1e;
+    --header-border-color: #2d2d2d;
+    --code-background-color: #dddddd;
+    --text-color: #fff;
+}
+
+iframe {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border: hidden;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    background-color: var(--background-color);
+}
+
+a:visited {
+    color: inherit;
+}
+
+/* h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+li,
+strong,
+small,
+a {
+    color: var(--text-color);
+} */
+
+nav ul,
+details ul {
+    list-style-type: none;
+}
+
+.edit-this-page {
+    display: flex;
+    align-items: center;
+    column-gap: 5px;
+}
+
+code {
+    --padding: 0.25em;
+
+    border-radius: 0.25em;
+    background-color: var(--code-background-color);
+    padding-top: var(--padding);
+    padding-bottom: var(--padding);
+    padding-left: var(--padding);
+    padding-right: var(--padding);
+}
+
+header {
+    width: 100%;
+    border-bottom: 1px solid var(--header-border-color);
+    background-color: var(--header-background-color);
+}
+
+header nav a,
+details ul li a {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+
+}
+
+header nav {
+    display: flex;
+    justify-content: space-between;
+}
+
+header nav ul {
+    display: flex;
+}
+
+.branding>li {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    column-gap: 5px;
+}
+
+.branding>li>img {
+    height: 20px;
+    width: 20px;
+}
+
+header nav li {
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+}
+
+header nav button {
+    background: none;
+    border: none;
+    /* border: 1px solid black;
+    border-radius: 0.25rem; */
+}
+
+/* button i {
+    font-size: 1.25em;
+} */
+
+.documentation {
+    display: grid;
+    grid-template-columns: 25% 75%;
+    grid-template-rows: 100%;
+    grid-template-areas: "sidebar markdown-content";
+}
+
+.documentation .sidebar {
+    grid-area: "sidebar";
+    padding-left: 0.5em;
+    padding-top: 0.5em;
+    background-color: var(--header-background-color);
+    border-right: 1px solid var(--header-border-color);
+}
+
+.documentation .sidebar li:hover {
+    background-color: #c3c3c3;
+}
+
+.documentation .markdown-content {
+    grid-area: "markdown-content";
+    padding-left: 25px;
+    padding-right: 25px;
+}
+
+.documentation .markdown-content nav ul {
+    display: flex;
+    justify-content: space-between;
+}
+
+.documentation .markdown-content nav ul li a {
+    text-decoration: none;
+}
+
+.documentation .editor-group {
+    border: solid 1px black;
+}
+
+.documentation .output-group .output-logs {
+    border-top: 1px solid black;
+    /* padding-left: 10px; */
+}
+
+.documentation .output-group .output-logs p {
+    padding-left: 10px;
+}
+
+.documentation .output-group .output-logs .log-level-success {
+    border-left: 10px solid green;
+}
+
+.documentation .output-group .output-logs .log-level-warning {
+    border-left: 10px solid yellow;
+}
+
+.documentation .output-group .output-logs .log-level-error {
+    border-left: 10px solid red;
+}
+
+.documentation .output-group .output-controls {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+
+    border-top: 1px solid black;
+    background-color: white;
+
+    padding-left: 1em;
+    padding-right: 1em;
+}
+
+.documentation .output-group .output-controls div {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    column-gap: 10px;
+}
+
+/* .documentation .output-group .output-controls div button {
+    background: none;
+    border: none;
+    font-size: 1em;
+} */
+
+.documentation .output-group .output-controls div a {
+    /* text-decoration: none; */
+    color: inherit;
+    font-size: 1em;
+}
+
+.playground {
+    display: grid;
+    grid-template-columns: 5% 95%;
+    grid-template-rows: 100%;
+    grid-template-areas: "sidebar editor";
+}
+
+.playground .sidebar {
+    grid-area: "sidebar";
+    display: flex;
+    flex-direction: column;
+    row-gap: 0.5em;
+    padding-top: 10px;
+    background-color: var(--header-background-color);
+    border-right: 1px solid var(--header-border-color);
+}
+
+.playground .sidebar button {
+    background: none;
+    border: none;
+    /* border: 1px solid black; */
+    /* border-radius: 0.25em; */
+}
+
+.playground .editor-group {
+    grid-area: "editor";
+}
