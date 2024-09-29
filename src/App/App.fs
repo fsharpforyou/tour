@@ -22,7 +22,6 @@ let fsharpOptions = [|
     "--langversion:preview"
 |]
 
-
 let monacoEditorOptions = {|
     minimap = {| enabled = false |}
     fontSize = 16
@@ -327,23 +326,20 @@ module DocumentationEditorInstance =
                 Html.div [
                     prop.className "output-group"
                     prop.children [
-                        if isOutputExpanded then
+                        if isOutputExpanded && not (List.isEmpty model.Logs) then
                             Html.div [
                                 prop.className "output-logs"
                                 prop.children [
-                                    if List.isEmpty model.Logs then
-                                        Html.p "No output."
-                                    else
-                                        for (log, level) in model.Logs do
-                                            Html.p [
-                                                prop.className (
-                                                    match level with
-                                                    | EditorUtils.LogLevel.Log -> "log-level-success"
-                                                    | EditorUtils.LogLevel.Warn -> "log-level-warning"
-                                                    | EditorUtils.LogLevel.Error -> "log-level-error"
-                                                )
-                                                prop.text log
-                                            ]
+                                    for (log, level) in model.Logs do
+                                        Html.p [
+                                            prop.className (
+                                                match level with
+                                                | EditorUtils.LogLevel.Log -> "log-level-success"
+                                                | EditorUtils.LogLevel.Warn -> "log-level-warning"
+                                                | EditorUtils.LogLevel.Error -> "log-level-error"
+                                            )
+                                            prop.text log
+                                        ]
                                 ]
                             ]
                         else
@@ -367,7 +363,9 @@ module DocumentationEditorInstance =
                                 Html.div [
                                     Html.button [
                                         prop.text "Compile"
-                                        prop.onClick (fun _ -> dispatch EditorUtils.Msg.Compile)
+                                        prop.onClick (fun _ ->
+                                            dispatch EditorUtils.Msg.Compile
+                                            setOutputExpanded true)
                                     ]
                                     Html.a [
                                         prop.href (EditorUtils.createPlaygroundUrl model.FSharpCode)
