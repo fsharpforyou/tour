@@ -8,16 +8,16 @@ https://dev.to/ananyaneogi/create-a-dark-light-mode-switch-with-css-variables-34
 :root {
     --background-color: #fff;
     --header-background-color: #fff;
-    --header-border-color: #cccccc;
-    --code-background-color: #dddddd;
+    --border-color: #cccccc;
+    --code-block-background-color: #dddddd;
     --text-color: #000;
 }
 
 [data-theme="dark"] {
     --background-color: #1e1e1e;
     --header-background-color: #1e1e1e;
-    --header-border-color: #2d2d2d;
-    --code-background-color: #dddddd;
+    --border-color: #2d2d2d;
+    --code-block-background-color: #dddddd;
     --text-color: #fff;
 }
 
@@ -62,20 +62,25 @@ details ul {
     column-gap: 5px;
 }
 
+pre,
 code {
     --padding: 0.25em;
 
     border-radius: 0.25em;
-    background-color: var(--code-background-color);
+    background-color: var(--code-block-background-color);
     padding-top: var(--padding);
     padding-bottom: var(--padding);
     padding-left: var(--padding);
     padding-right: var(--padding);
 }
 
+pre>code {
+    all: unset;
+}
+
 header {
     width: 100%;
-    border-bottom: 1px solid var(--header-border-color);
+    border-bottom: 1px solid var(--border-color);
     background-color: var(--header-background-color);
 }
 
@@ -136,7 +141,7 @@ header nav button {
     padding-left: 0.5em;
     padding-top: 0.5em;
     background-color: var(--header-background-color);
-    border-right: 1px solid var(--header-border-color);
+    border-right: 1px solid var(--border-color);
 }
 
 .documentation .sidebar li:hover {
@@ -159,11 +164,11 @@ header nav button {
 }
 
 .documentation .editor-group {
-    border: solid 1px black;
+    border: solid 1px var(--border-color);
 }
 
 .documentation .output-group .output-logs {
-    border-top: 1px solid black;
+    border-top: 1px solid var(--border-color);
     /* padding-left: 10px; */
 }
 
@@ -189,8 +194,8 @@ header nav button {
     justify-content: space-between;
     align-items: center;
 
-    border-top: 1px solid black;
-    background-color: white;
+    border-top: 1px solid var(--border-color);
+    /* background-color: white; */
 
     padding-left: 1em;
     padding-right: 1em;
@@ -229,7 +234,7 @@ header nav button {
     row-gap: 0.5em;
     padding-top: 10px;
     background-color: var(--header-background-color);
-    border-right: 1px solid var(--header-border-color);
+    border-right: 1px solid var(--border-color);
 }
 
 .playground .sidebar button {
