@@ -1,6 +1,6 @@
 # Expressions
 
-The primary piece of F# syntax is an expression. An expression is simply, a block of code that when evaluated, produces a value. 
+The most fundamental construct in F# is an expression. An expression is a block of code that produces a value when evaluated.
 
 _Let bindings_ allow you to bind the result of an expression to a name. 
 
@@ -34,14 +34,11 @@ let ten = 10
 
 The advantage of top-down evaluation is that the flow of your application's code is easier to reason about. Code is read and evaluated from top to bottom sequentially, from a higher to a lower level, from core components to specific implementation details. We can clearly understand and reason about our dependent modules, types, functions and their dependencies.
 
-This top-down evaluation also applies to the ordering of files within a project. You can only use functions, types, and modules defined in other files if the file is ordered above the current definition.
+This top-down evaluation also applies to the ordering of files within a project. You can only use functions, types, and modules defined in other files if the file is ordered above the current definition. Assuming you define a project with the structure of:
+  1. Logic.fs
+  2. Program.fs
 
-```
-1. Logic.fs
-2. Program.fs
-```
-
-Here, any code in `Program.fs` can access modules, types, functions, and bindings in `Logic.fs`, but not the other way around. This is because `Logic.fs` is ordered above `Program.fs`.
+Any code in `Program.fs` can access modules, types, functions, and bindings in `Logic.fs`, but not the other way around. This is because `Logic.fs` is ordered above `Program.fs`.
 
 F# relies on the level of indentation to determine the beginning and end of an expression. You may be familiar with this if you've programmed in languages with syntatic indentation before. When writing an expression block, the level of indentation must be consistent for each expression within that block.
 

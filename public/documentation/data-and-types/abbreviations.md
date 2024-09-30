@@ -9,6 +9,8 @@ type Logger = string -> unit
 Because the `Logger` type is just an abbreviation for the function signature `string -> unit` you can use the two interchangeably.
 
 ```fsharp
+type Logger = string -> unit
+
 let exclaim (logger: Logger) (value: string) = logger (sprintf "%s!!!" value)
 
 let logger: Logger = printfn "%s"

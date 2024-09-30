@@ -33,9 +33,17 @@ As F# is evaluated from top to bottom, the instance of a record value will be in
 type Person = { FirstName: string; LastName: string }
 type Customer = { FirstName: string; LastName: string }
 
-let johnDoe = { FirstName = "John"; LastName = "Doe" } // Customer
-let johnDoe2: Person = { FirstName: string; LastName: string } // Person
-let johnDoe3 = { Person.FirstName = "John"; Person.LastName = "Doe" } // Person
+let displayPerson (person: Person) = printfn "Person = %A" person
+let displayCustomer (customer: Customer) = printfn "Customer = %A" customer
+
+let johnDoe = { FirstName = "John"; LastName = "Doe" }
+displayCustomer johnDoe
+
+let johnDoe2: Person = { FirstName = "John"; LastName = "Doe" }
+displayPerson johnDoe2
+
+let johnDoe3 = { Person.FirstName = "John"; Person.LastName = "Doe" }
+displayPerson johnDoe3
 ```
 
 You can pattern match a record value using the _record pattern_. This pattern allows you to specify a pattern for one or more properties of a record.
@@ -48,4 +56,28 @@ let identify person =
     | { FirstName = "John"; LastName = "Doe" }
     | { FirstName = "Jane"; LastName = "Doe" } -> "Could not identify this person."
     | { FirstName = firstName; LastName = lastName } -> $"Identified as: {firstName} {lastName}"
+```
+
+```fsharp
+type Person = { FirstName: string; LastName: string; Age: int }
+type Team = { Name: string; Members: Person list }
+
+let team =  {
+  Name = "Developers"; 
+  Members = [ 
+    { FirstName = "John"; LastName = "Doe"; Age = 30 }
+    { FirstName = "Jane"; LastName = "Smith"; Age = 28 }
+  ]
+}
+
+let describeTeam team =
+    let memberDescriptions =
+        team.Members
+        |> List.map (fun person -> $"{person.FirstName} {person.LastName} ({person.Age} years old)")
+        |> String.concat ", "
+
+    $"Team: {team.Name}, Members: {memberDescriptions}"
+
+let teamDescription = describeTeam team
+printfn "%s" teamDescription
 ```

@@ -6,7 +6,7 @@ For example, you can have an `int list`, a `string list`, or a `float list`. Eac
 
 You can define a generic type parameter using an apostrophe followed by the name of the type parameter.
 
-```fsharp
+```
 type Data<'a> = { Value: 'a }
 ```
 
@@ -15,13 +15,24 @@ The `'a` in the above definition denotes a generic type parameter. If you wanted
 The `Value` property in the Data type can only contain a value of type `'a`. For `Data<string>` the `Value` property must contain a `string` value.
 
 ```fsharp
+type Data<'a> = { Value: 'a }
+
 let data: Data<string> = { Value = "Hello, World!" }
 let value: string = data.Value
+printfn "%s" value
+
+let data1: Data<int> = { Value = 10 }
+let value1: int = data1.Value
+printfn "%d" value1
 ```
 
 You can also define generic type parameters in functions and pass them to your desired type. Here we can accept a value of our generic `Data` type, passing a generic type parameter to it in the process. 
 
 ```fsharp
-let printData (data: Data<'a>) =
-    printfn "%A" data.Value
+type Data<'a> = { Value: 'a }
+
+let printData (data: Data<'a>) = printfn "%A" data.Value
+
+printData { Value = "Hello, World!" }
+printData { Value = 10 }
 ```

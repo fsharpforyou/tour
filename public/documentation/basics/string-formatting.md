@@ -4,7 +4,8 @@ String formatting is the process of integrating additional values into string li
 
 ```fsharp
 let name = "John Doe"
-sprintf "Your name is %s" name // "Your name is John Doe"
+let nameDescription = sprintf "Your name is %s" name
+printfn "%s" nameDescription
 ```
 
 Here, we specify that the string format contains a single string value, indicated by the `%s` format specifier. 
@@ -26,12 +27,12 @@ Another method is to use interpolated strings which allow you to bake the values
 
 ```fsharp
 let name = "John Doe"
-$"Your name is {name}" // "Your name is John Doe"
+printfn $"Your name is {name}"
 ```
 
 These interpolated strings can also be type checked by providing a format before the template. This will result in a compiler error if the type of the value doesn't match the format specifier.
 
 ```fsharp
-$"Your name is %s{name}" // this works.
-$"Your name is %b{name}" // compiler error. %b = boolean
+printfn $"Your name is %s{name}" // this works.
+printfn $"Your name is %b{name}" // compiler error. %b = boolean
 ```

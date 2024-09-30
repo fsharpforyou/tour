@@ -18,4 +18,6 @@ let fizzBuzz =
     elif number % 5 = 0 then "Buzz"
     elif number % 3 = 0 then "Fizz"
     else string number
+
+printfn "%s" fizzBuzz
 ```

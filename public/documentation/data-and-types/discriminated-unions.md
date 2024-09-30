@@ -7,35 +7,57 @@ type Color =
     | Red
     | Green
     | Blue
-    | RGB of int * int * int
+    | Rgb of int * int * int
 ```
 
 The discriminated union defined above has four cases: `Red`, `Green`, `Blue`, and `Rgb`.
 Only the `RGB` case has data associated with it. You can construct instances of these cases using the identifier and any data.
 
 ```fsharp
+type Color =
+    | Red
+    | Green
+    | Blue
+    | Rgb of int * int * int
+
 let red = Red
-let black = RGB (0, 0, 0)
+let black = Rgb (0, 0, 0)
+printfn "%A" black
 ```
 
 The case constructor for the `RGB` case is a function with the signature of `int * int * int -> Color`.
 
 ```fsharp
-let rgb: int * int * int -> Color = RGB
+type Color =
+    | Red
+    | Green
+    | Blue
+    | Rgb of int * int * int
+
+let rgb: int * int * int -> Color = Rgb
+let color: Color = rgb (255, 255, 255)
+printfn "%A" color
 ```
 
 You can match against the cases of a discriminated union by using the _identifier_ pattern. The _identifier_ pattern allows you to match against the case by its identifier and additionally, supply a pattern for any data associated with it.
 
 ```fsharp
+type Color =
+    | Red
+    | Green
+    | Blue
+    | Rgb of int * int * int
+
 let rgb color =
     match color with
     | Red -> 255, 0, 0
     | Green -> 0, 255, 0
     | Blue -> 0, 0, 255
-    | RGB (r, g, b) -> r, g, b
+    | Rgb (r, g, b) -> r, g, b
 
 let color = Red
 let (r, g, b) = rgb color
+printfn "R: %d, G: %d, B: %d" r g b
 ```
 
 When dealing with a case that has data in the form of a tuple, it can be difficult to discern which tuple value corresponds to which piece of the data. In these cases, it is good practice to include labels on tuple elements like so:
@@ -48,4 +70,20 @@ type Color =
     | Rgb of r: int * g: int * b: int
 
 let color = Rgb (r = 255, g = 255, b = 255)
+printfn "%A" color
+```
+
+Another common option is to use a record for a union case with multiple fields.
+
+```fsharp
+type RgbColor = { R: int; G: int; B: int }
+
+type Color =
+    | Red
+    | Green
+    | Blue
+    | Rgb of RgbColor
+
+let color = Rgb { R = 255; G = 255; B = 255 }
+printfn "%A" color
 ```

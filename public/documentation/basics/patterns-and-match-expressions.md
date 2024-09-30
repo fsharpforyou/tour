@@ -4,7 +4,7 @@ Pattern matching allows you to match a value against patterns, which act as rule
 
 To demonstrate pattern matching, let's get started with a pattern you're already familiar with: the _variable_ pattern. This pattern allows you to bind a value to a name like so: `let five = 5`. That's right, you've been using the variable pattern the whole time! Just like how everything on the right-hand side of the equals sign in a binding is an expression, the left-hand side is always a pattern.
 
-```fsharp
+```
 let <pattern> = <expression>
 ```
 
@@ -16,6 +16,8 @@ let result =
     match number with
     | 10 -> "The number is Ten"
     | number -> $"The number is not ten, but instead: {number}"
+
+printfn "%s" result
 ```
 
 Here you can see two patterns in action: the _constant_ and _variable_ patterns. The _constant_ pattern will match a value against a constant value like `10` or `"Hello, World!"`. This match expression is exhaustive as the last branch utilizes the _variable_ pattern which will always match against the value.
@@ -34,16 +36,20 @@ A branch in a match expression can also include a conditional expression. This i
 
 ```fsharp
 let number = 10
+
 let result =
     match number with
     | number when number % 2 = 0 -> $"{number} is even"
     | number -> $"{number} is odd"
+
+printfn "%s" result
 ```
 
 Two patterns can lead to the same expression being evaluated using the _OR_ pattern.
 
 ```fsharp
 let number = 10
+
 let result =
     match number with
     | pattern1

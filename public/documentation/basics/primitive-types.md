@@ -13,10 +13,10 @@ What do these primitive types represent?
 - `unit`, when passed to a function, means that function has no arguments. When returned from a function, it indicates that the function has no useful return value. Often used when a function e.g. prints to the screen and does nothing else.
 
 ```fsharp
-10              // int
-10.0            // float
-'a'             // char
-"Hello, World!" // string
-true            // bool
-()              // unit
+let intValue: int = 10
+let floatValue: float = 10.0
+let charValue: char = 'a'
+let stringValue: string = "Hello, World!"
+let boolValue: bool = true
+let unitValue: unit = ()
 ```

@@ -7,9 +7,8 @@ let rec fib n =
     if n <= 1
     then n
     else fib (n - 1) + fib (n - 2)
-//       ^^^           ^^^
-// function is allowed to be recursive
-// as the `rec` keyword is present.
+
+printfn "fib 5 = %d" (fib 5)
 ```
 
 Mutually recursive functions can be defined using the `and` keyword.
