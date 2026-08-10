@@ -27,7 +27,8 @@ type LogLevel =
 
 [<RequireQualifiedAccess>]
 module LogLevel =
-    let cssClass = function
+    let cssClass =
+        function
         | LogLevel.Log -> "log"
         | LogLevel.Warn -> "warn"
         | LogLevel.Error -> "error"
@@ -54,7 +55,8 @@ module Theme =
             | Light -> "light"
             | Dark -> "dark"
 
-        localStorage.setItem ("theme", value) 
+        localStorage.setItem ("theme", value)
+
 type Model = {
     Logs: (string * LogLevel) list
     FSharpCode: string
@@ -101,13 +103,19 @@ type SyntaxHighlighter =
     static member inline children(value: ReactElement seq) = Helper.mkProperty "children" value
 
     static member inline highlighter(properties: seq<IReactProperty>) =
-        ReactLegacy.createElement(unbox<ReactElement>(import "Prism as ReactSyntaxHighlighter" "react-syntax-highlighter"), createObj !!properties)
+        ReactLegacy.createElement (
+            unbox<ReactElement> (import "Prism as ReactSyntaxHighlighter" "react-syntax-highlighter"),
+            createObj !!properties
+        )
 
 [<Erase>]
 type MonacoEditor =
     static member inline onChange(f: string -> unit) = Helper.mkProperty "onChange" f
     static member inline theme(value: string) = Helper.mkProperty "theme" value
-    static member inline defaultLanguage(value: string) = Helper.mkProperty "defaultLanguage" value
+
+    static member inline defaultLanguage(value: string) =
+        Helper.mkProperty "defaultLanguage" value
+
     static member inline value(value: string) = Helper.mkProperty "value" value
     static member inline options(value: obj) = Helper.mkProperty "options" value
 
@@ -115,7 +123,7 @@ type MonacoEditor =
         Helper.mkProperty "onMount" f
 
     static member inline editor(properties: IReactProperty list) =
-        ReactLegacy.createElement(unbox<ReactElement>(import "Editor" "@monaco-editor/react"), createObj !!properties)
+        ReactLegacy.createElement (unbox<ReactElement> (import "Editor" "@monaco-editor/react"), createObj !!properties)
 
 module WebWorker =
     let create () = Worker.Create(Constants.worker)
@@ -241,7 +249,7 @@ let update msg model =
     | SetFSharpCode code ->
         let debouncerModel, debouncerCmd =
             model.Debouncer
-            |> Debouncer.bounce (TimeSpan.FromSeconds 1L) "user_input" ParseCode 
+            |> Debouncer.bounce (TimeSpan.FromSeconds 1L) "user_input" ParseCode
 
         {
             model with
@@ -256,7 +264,7 @@ let update msg model =
         let cmd = Cmd.ofEffect (fun _ -> setModelMarkers model.Editor model.Markers)
         model, cmd
     | AddConsoleLog(level, output) ->
-        let logs = model.Logs @ [(output, level)]
+        let logs = model.Logs @ [ (output, level) ]
         { model with Logs = logs }, Cmd.none
     | Compiled(_, _, _, _) when model.CompilingRevision <> Some model.CodeRevision -> model, Cmd.none
     | Compiled(code, _, errors, _) ->
@@ -281,7 +289,10 @@ let update msg model =
         model,
         Cmd.batch [
             errors |> Editor.mapErrorToMarker |> SetMarkers |> Cmd.ofMsg
-            if errors.Length = 0 then Cmd.OfFunc.perform Iframe.generateHtmlBlobUrl code SetIFrameUrl else Cmd.none
+            if errors.Length = 0 then
+                Cmd.OfFunc.perform Iframe.generateHtmlBlobUrl code SetIFrameUrl
+            else
+                Cmd.none
         ]
     | FetchedTableOfContents tableOfContents ->
         let url = Router.currentUrl ()
@@ -297,7 +308,12 @@ let update msg model =
             Cmd.ofMsg CalculateMarkdownAndCodeValues
             Cmd.ofMsg CalculateDocEntryNavigation
         ]
-    | FetchTableOfContentsExn _ -> { model with IsLoadingDocumentation = false }, Cmd.none
+    | FetchTableOfContentsExn _ ->
+        {
+            model with
+                IsLoadingDocumentation = false
+        },
+        Cmd.none
     | SetUrl url ->
         let currentPage = getCurrentPage model.TableOfContents url
 
@@ -359,8 +375,9 @@ module TourView =
                         match model.Theme with
                         | Light -> "light"
                         | Dark -> "dark"
-                    
-                    prop.className  $"tour-app {themeClassName}"
+
+                    prop.className $"tour-app {themeClassName}"
+
                     prop.children [
                         Html.a [
                             prop.href "#main-content"
@@ -398,15 +415,12 @@ module TourView =
                                             prop.ariaLabel "View source on GitHub"
                                             prop.title "View source on GitHub"
                                             prop.children [
-                                                Html.i [
-                                                    prop.className "fa-brands fa-github"
-                                                    prop.ariaHidden true
-                                                ]
+                                                Html.i [ prop.className "fa-brands fa-github"; prop.ariaHidden true ]
                                             ]
                                         ]
                                         Html.button [
                                             let label =
-                                               match model.Theme with
+                                                match model.Theme with
                                                 | Light -> "Switch to dark mode"
                                                 | Dark -> "Switch to light mode"
 
@@ -415,6 +429,7 @@ module TourView =
                                             prop.ariaPressed (model.Theme = Dark)
                                             prop.ariaLabel label
                                             prop.title label
+
                                             prop.children [
                                                 Html.i [
                                                     prop.className (
@@ -451,38 +466,42 @@ module TourView =
                                             Markdown.markdown [
                                                 markdown.children model.Markdown
                                                 markdown.components [
-                                                markdown.components.code (fun props ->
-                                                    if props.isInline then
-                                                        Html.code props.children
-                                                    else
-                                                        let syntaxStyle =
-                                                            match model.Theme with
-                                                            | Light ->
-                                                                import "vs" "react-syntax-highlighter/dist/esm/styles/prism"
-                                                            | Dark ->
-                                                                import "vscDarkPlus" "react-syntax-highlighter/dist/esm/styles/prism"
+                                                    markdown.components.code (fun props ->
+                                                        if props.isInline then
+                                                            Html.code props.children
+                                                        else
+                                                            let syntaxStyle =
+                                                                match model.Theme with
+                                                                | Light ->
+                                                                    import
+                                                                        "vs"
+                                                                        "react-syntax-highlighter/dist/esm/styles/prism"
+                                                                | Dark ->
+                                                                    import
+                                                                        "vscDarkPlus"
+                                                                        "react-syntax-highlighter/dist/esm/styles/prism"
 
-                                                        let language = props.className.Replace("language-", "")
+                                                            let language = props.className.Replace("language-", "")
 
-                                                        SyntaxHighlighter.highlighter [
-                                                            SyntaxHighlighter.className "markdown-code-block"
-                                                            SyntaxHighlighter.language language
-                                                            SyntaxHighlighter.style syntaxStyle
-                                                            SyntaxHighlighter.customStyle (
-                                                                createObj [
-                                                                    "border" ==>
-                                                                        match model.Theme with
-                                                                        | Light -> "1px solid #b9d8e9"
-                                                                        | Dark -> "1px solid #41647d"
-                                                                    "background" ==>
-                                                                        match model.Theme with
-                                                                        | Light -> "#f5f9fc"
-                                                                        | Dark -> "#111827"
-                                                                    "borderRadius" ==> "0"
-                                                                ]
-                                                            )
-                                                            SyntaxHighlighter.children props.children
-                                                        ])
+                                                            SyntaxHighlighter.highlighter [
+                                                                SyntaxHighlighter.className "markdown-code-block"
+                                                                SyntaxHighlighter.language language
+                                                                SyntaxHighlighter.style syntaxStyle
+                                                                SyntaxHighlighter.customStyle (
+                                                                    createObj [
+                                                                        "border"
+                                                                        ==> match model.Theme with
+                                                                            | Light -> "1px solid #b9d8e9"
+                                                                            | Dark -> "1px solid #41647d"
+                                                                        "background"
+                                                                        ==> match model.Theme with
+                                                                            | Light -> "#f5f9fc"
+                                                                            | Dark -> "#111827"
+                                                                        "borderRadius" ==> "0"
+                                                                    ]
+                                                                )
+                                                                SyntaxHighlighter.children props.children
+                                                            ])
                                                 ]
                                             ]
                                     ]
@@ -505,7 +524,8 @@ module TourView =
                                                         createObj [
                                                             "fontSize" ==> 16
                                                             "lineHeight" ==> 27
-                                                            "fontFamily" ==> "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+                                                            "fontFamily"
+                                                            ==> "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
                                                             "fontLigatures" ==> false
                                                             "automaticLayout" ==> true
                                                             "minimap" ==> createObj [ "enabled" ==> false ]
@@ -516,7 +536,9 @@ module TourView =
                                                     )
                                                     MonacoEditor.onChange (SetFSharpCode >> dispatch)
                                                     MonacoEditor.onMount (
-                                                        Editor.onFSharpEditorDidMount model.Worker (SetEditor >> dispatch)
+                                                        Editor.onFSharpEditorDidMount
+                                                            model.Worker
+                                                            (SetEditor >> dispatch)
                                                     )
                                                 ]
                                             ]

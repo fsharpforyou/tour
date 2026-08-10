@@ -15,9 +15,7 @@ type ReadonlyArray<'T> = System.Collections.Generic.IReadOnlyList<'T>
 type RegExp = System.Text.RegularExpressions.Regex
 
 [<Erase>]
-type Record<'k, 't> =
-    interface
-    end
+type Record<'k, 't> = interface end
 
 [<Import("MonacoEnvironment", "module")>]
 let MonacoEnvironment: Monaco.Environment option = jsNative
@@ -499,9 +497,7 @@ module Monaco =
         | MAX_VALUE = 132
 
     [<AllowNullLiteral>]
-    type KeyMod =
-        interface
-        end
+    type KeyMod = interface end
 
     [<AllowNullLiteral>]
     type KeyModStatic =
@@ -1248,9 +1244,7 @@ module Monaco =
             abstract reset: unit -> unit
             abstract get: unit -> 'T option
 
-        type ContextKeyValue =
-            interface
-            end
+        type ContextKeyValue = interface end
 
         [<AllowNullLiteral>]
         type IEditorOverrideServices =
@@ -2275,9 +2269,7 @@ module Monaco =
 
         /// An event describing that the language configuration associated with a model has changed.
         [<AllowNullLiteral>]
-        type IModelLanguageConfigurationChangedEvent =
-            interface
-            end
+        type IModelLanguageConfigurationChangedEvent = interface end
 
         [<AllowNullLiteral>]
         type IModelContentChange =
@@ -3656,17 +3648,11 @@ module Monaco =
 
         type EditorOptionsType = obj
 
-        type FindEditorOptionsKeyById<'T> =
-            interface
-            end
+        type FindEditorOptionsKeyById<'T> = interface end
 
-        type ComputedEditorOptionValue<'T when 'T :> IEditorOption<obj option, obj option>> =
-            interface
-            end
+        type ComputedEditorOptionValue<'T when 'T :> IEditorOption<obj option, obj option>> = interface end
 
-        type FindComputedEditorOptionValueById<'T> =
-            interface
-            end
+        type FindComputedEditorOptionValueById<'T> = interface end
 
         [<AllowNullLiteral>]
         type IEditorConstructionOptions =
@@ -4505,9 +4491,7 @@ module Monaco =
             | Trailing
 
         [<AllowNullLiteral>]
-        type IExportsEditorOptionsRulersIEditorOption =
-            interface
-            end
+        type IExportsEditorOptionsRulersIEditorOption = interface end
 
         [<StringEnum>]
         [<RequireQualifiedAccess>]
@@ -6219,9 +6203,7 @@ module Monaco =
                     ProviderResult<ResizeArray<ResizeArray<SelectionRange>>>
 
         [<AllowNullLiteral>]
-        type FoldingContext =
-            interface
-            end
+        type FoldingContext = interface end
 
         /// A provider of folding ranges for editor models.
         [<AllowNullLiteral>]
@@ -6546,7 +6528,11 @@ module Monaco =
             abstract log: string option with get, set
 
         type IMonarchLanguageAction =
-            U3<IShortMonarchLanguageAction, IExpandedMonarchLanguageAction, ResizeArray<U2<IShortMonarchLanguageAction, IExpandedMonarchLanguageAction>>>
+            U3<
+                IShortMonarchLanguageAction,
+                IExpandedMonarchLanguageAction,
+                ResizeArray<U2<IShortMonarchLanguageAction, IExpandedMonarchLanguageAction>>
+             >
 
         /// This interface can be shortened as an array, ie. ['{','}','delimiter.curly']
         [<AllowNullLiteral>]
@@ -6764,9 +6750,7 @@ module Monaco =
                 abstract Item: providerId: string -> CSSDataV1 with get, set
 
             [<RequireQualifiedAccess>]
-            type CSSDataV1Version =
-                interface
-                end
+            type CSSDataV1Version = interface end
 
         module Html =
 
@@ -6932,9 +6916,7 @@ module Monaco =
                 abstract Item: providerId: string -> HTMLDataV1 with get, set
 
             [<RequireQualifiedAccess>]
-            type HTMLDataV1Version =
-                interface
-                end
+            type HTMLDataV1Version = interface end
 
         module Json =
 
@@ -6957,11 +6939,13 @@ module Monaco =
 
                 /// A list of known schemas and/or associations of schemas to file names.
                 abstract schemas:
-                    ResizeArray<{|
-                        uri: string
-                        fileMatch: ResizeArray<string> option
-                        schema: obj option
-                    |}> option
+                    ResizeArray<
+                        {|
+                            uri: string
+                            fileMatch: ResizeArray<string> option
+                            schema: obj option
+                        |}
+                     > option
 
                 /// If set, the schema service would load schema content on-demand with 'fetch' if available
                 abstract enableSchemaRequest: bool option
@@ -7072,7 +7056,14 @@ module Monaco =
                 abstract Item: index: string -> 'T with get, set
 
             type CompilerOptionsValue =
-                U6<string, float, bool, ResizeArray<U2<string, float>>, ResizeArray<string>, MapLike<ResizeArray<string>>> option
+                U6<
+                    string,
+                    float,
+                    bool,
+                    ResizeArray<U2<string, float>>,
+                    ResizeArray<string>,
+                    MapLike<ResizeArray<string>>
+                 > option
 
             [<AllowNullLiteral>]
             type CompilerOptions =
@@ -7298,10 +7289,12 @@ module Monaco =
                 /// <param name="libs">An array of entries to register.</param>
                 abstract setExtraLibs:
                     libs:
-                        ResizeArray<{|
-                            content: string
-                            filePath: string option
-                        |}> ->
+                        ResizeArray<
+                            {|
+                                content: string
+                                filePath: string option
+                            |}
+                         > ->
                         unit
 
                 /// Get current TypeScript compiler options for the language service.
@@ -7445,9 +7438,7 @@ module Monaco =
                 | N3 = 3
 
             [<AllowNullLiteral>]
-            type DiagnosticReportsUnnecessary =
-                interface
-                end
+            type DiagnosticReportsUnnecessary = interface end
 
         [<AllowNullLiteral>]
         type IMonarchLanguageTokenizer =
