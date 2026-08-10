@@ -8,15 +8,13 @@ open Fable.Core
 open Fable.Core.JsInterop
 open Fable.WebWorker
 open Fable.Standalone
-open Fable.ReactToastify
 open Feliz.Markdown
 open Navigation
 open MonacoEditor
 open System
-open Feliz.UseMediaQuery
 
-importSideEffects "react-toastify/dist/ReactToastify.css"
 importSideEffects "./monaco-vite.js"
+importSideEffects "./styles.css"
 
 module Helper =
     let inline mkProperty<'t> (key: string) (value: obj) : 't = (key, box value) |> unbox<'t>
@@ -29,25 +27,51 @@ type LogLevel =
 
 [<RequireQualifiedAccess>]
 module LogLevel =
-    let toCssColor logLevel =
-        match logLevel with
-        | LogLevel.Log -> "inherit"
-        | LogLevel.Warn -> "darkorange"
-        | LogLevel.Error -> "red"
+    let cssClass = function
+        | LogLevel.Log -> "log"
+        | LogLevel.Warn -> "warn"
+        | LogLevel.Error -> "error"
 
+type Theme =
+    | Light
+    | Dark
+
+type CompileState =
+    | Ready
+    | Compiling
+
+[<RequireQualifiedAccess>]
+module Theme =
+    let fromStorage () =
+        match localStorage.getItem "theme" with
+        | "light" -> Light
+        | "dark"
+        | _ -> Dark
+
+    let saveToStorage theme =
+        let value =
+            match theme with
+            | Light -> "light"
+            | Dark -> "dark"
+
+        localStorage.setItem ("theme", value) 
 type Model = {
     Logs: (string * LogLevel) list
     FSharpCode: string
-    CompiledJavaScript: string
     Markdown: string
     IFrameUrl: string
     Worker: ObservableWorker<WorkerAnswer>
     TableOfContents: Documentation.TableOfContents
     CurrentPage: Navigation.Page
     DocEntryNavigation: DocEntryNavigation
-    Editor: Monaco.Editor.IStandaloneCodeEditor
+    Editor: Monaco.Editor.IStandaloneCodeEditor option
     Markers: Monaco.Editor.IMarkerData array
     Debouncer: Debouncer.State
+    Theme: Theme
+    CodeRevision: int
+    CompilingRevision: int option
+    CompileState: CompileState
+    IsLoadingDocumentation: bool
 }
 
 type Msg =
@@ -66,11 +90,14 @@ type Msg =
     | SetEditor of Monaco.Editor.IStandaloneCodeEditor
     | DebouncerSelfMsg of Debouncer.SelfMessage<Msg>
     | ParseCode
+    | ToggleTheme
 
 [<Erase>]
 type SyntaxHighlighter =
     static member inline language(value: string) = Helper.mkProperty "language" value
     static member inline style(value: string) = Helper.mkProperty "style" value
+    static member inline customStyle(value: obj) = Helper.mkProperty "customStyle" value
+    static member inline className(value: string) = Helper.mkProperty "className" value
     static member inline children(value: ReactElement seq) = Helper.mkProperty "children" value
 
     static member inline highlighter(properties: seq<IReactProperty>) =
@@ -82,8 +109,7 @@ type MonacoEditor =
     static member inline theme(value: string) = Helper.mkProperty "theme" value
     static member inline defaultLanguage(value: string) = Helper.mkProperty "defaultLanguage" value
     static member inline value(value: string) = Helper.mkProperty "value" value
-    static member inline width(value: string) = Helper.mkProperty "width" value
-    static member inline height(value: string) = Helper.mkProperty "height" value
+    static member inline options(value: obj) = Helper.mkProperty "options" value
 
     static member inline onMount(f: System.Func<Monaco.Editor.IStandaloneCodeEditor, Monaco.IExports, unit>) =
         Helper.mkProperty "onMount" f
@@ -98,12 +124,12 @@ module WebWorker =
         let handler dispatch =
             worker
             |> Observable.add (function
-                | Loaded version -> ()
-                | LoadFailed -> ()
+                | Loaded _ -> ()
+                | LoadFailed -> dispatch (AddConsoleLog(LogLevel.Error, "The F# compiler could not load."))
                 | ParsedCode errors -> errors |> Editor.mapErrorToMarker |> SetMarkers |> dispatch
                 | CompilationFinished(code, lang, errors, stats) -> dispatch (Compiled(code, lang, errors, stats))
                 | CompilationsFinished(code, lang, errors, stats) -> ()
-                | CompilerCrashed msg -> ()
+                | CompilerCrashed msg -> dispatch (AddConsoleLog(LogLevel.Error, "Compiler failed: " + msg))
                 | FoundTooltip _ -> ()
                 | FoundCompletions _ -> ()
                 | FoundDeclarationLocation _ -> ())
@@ -139,7 +165,6 @@ let init () =
     {
         Logs = []
         FSharpCode = ""
-        CompiledJavaScript = ""
         Markdown = ""
         IFrameUrl = ""
         Worker = worker
@@ -149,9 +174,14 @@ let init () =
             PreviousEntry = None
             NextEntry = None
         }
-        Editor = Unchecked.defaultof<Monaco.Editor.IStandaloneCodeEditor>
+        Editor = None
         Markers = [||]
         Debouncer = Debouncer.create ()
+        Theme = Theme.fromStorage ()
+        CodeRevision = 0
+        CompilingRevision = None
+        CompileState = Ready
+        IsLoadingDocumentation = true
     },
     cmd
 
@@ -176,18 +206,16 @@ let calculateFSharpCodeValue currentPage =
     | Page.Homepage
     | Page.TableOfContents -> helloWorldCode
 
-let setModelMarkers (editor: Monaco.Editor.IStandaloneCodeEditor) (markers: Monaco.Editor.IMarkerData array) =
-    match editor.getModel () with
+let setModelMarkers (editor: Monaco.Editor.IStandaloneCodeEditor option) (markers: Monaco.Editor.IMarkerData array) =
+    match editor with
     | None -> ()
-    | Some textModel -> Monaco.editor.setModelMarkers (textModel, "FSharpErrors", ResizeArray markers)
+    | Some editor ->
+        match editor.getModel () with
+        | None -> ()
+        | Some textModel -> Monaco.editor.setModelMarkers (textModel, "FSharpErrors", ResizeArray markers)
 
 let errorToLogLevel (error: Error) =
     if error.IsWarning then LogLevel.Warn else LogLevel.Error
-
-let toastNotificationFromErrors (errors: Error array) =
-    match errors with
-    | [||] -> Toastify.success "Compiled Successfully."
-    | _ -> Toastify.error "Failed to Compile."
 
 let scrollToTopOfMarkdown () =
     let markdownElement = document.getElementById "markdown-content"
@@ -195,13 +223,23 @@ let scrollToTopOfMarkdown () =
 
 let update msg model =
     match msg with
-    | Compile -> { model with Logs = [] }, Cmd.ofEffect (fun _ -> compile model)
+    | Compile when model.CompileState = Compiling -> model, Cmd.none
+    | Compile ->
+        {
+            model with
+                Logs = []
+                CompilingRevision = Some model.CodeRevision
+                CompileState = Compiling
+        },
+        Cmd.ofEffect (fun _ -> compile model)
     | SetIFrameUrl url -> { model with IFrameUrl = url }, Cmd.none
     | SetMarkdown doc -> { model with Markdown = doc }, Cmd.none
-    | SetEditor editor -> { model with Editor = editor }, Cmd.none
+    | SetEditor editor ->
+        let model = { model with Editor = Some editor }
+        model, Cmd.ofEffect (fun _ -> setModelMarkers model.Editor model.Markers)
     | ParseCode -> model, Cmd.ofEffect (fun _ -> WorkerRequest.ParseCode(model.FSharpCode, [||]) |> model.Worker.Post)
     | SetFSharpCode code ->
-        let (debouncerModel, debouncerCmd) =
+        let debouncerModel, debouncerCmd =
             model.Debouncer
             |> Debouncer.bounce (TimeSpan.FromSeconds 1L) "user_input" ParseCode 
 
@@ -209,6 +247,8 @@ let update msg model =
             model with
                 FSharpCode = code
                 Debouncer = debouncerModel
+                CodeRevision = model.CodeRevision + 1
+                CompileState = Ready
         },
         Cmd.map DebouncerSelfMsg debouncerCmd
     | SetMarkers markers ->
@@ -216,8 +256,9 @@ let update msg model =
         let cmd = Cmd.ofEffect (fun _ -> setModelMarkers model.Editor model.Markers)
         model, cmd
     | AddConsoleLog(level, output) ->
-        let logs = model.Logs @ [ (output, level) ]
+        let logs = model.Logs @ [(output, level)]
         { model with Logs = logs }, Cmd.none
+    | Compiled(_, _, _, _) when model.CompilingRevision <> Some model.CodeRevision -> model, Cmd.none
     | Compiled(code, _, errors, _) ->
         let logs =
             if errors.Length = 0 then
@@ -228,19 +269,19 @@ let update msg model =
                     |> Array.map (fun error -> error.Message, errorToLogLevel error)
                     |> Array.toList
 
-                model.Logs @ errorLogs
+                errorLogs @ model.Logs
 
         let model = {
             model with
-                CompiledJavaScript = code
                 Logs = logs
+                CompilingRevision = None
+                CompileState = Ready
         }
 
         model,
         Cmd.batch [
-            Cmd.ofEffect (fun _ -> toastNotificationFromErrors errors |> ignore)
             errors |> Editor.mapErrorToMarker |> SetMarkers |> Cmd.ofMsg
-            Cmd.OfFunc.perform Iframe.generateHtmlBlobUrl model.CompiledJavaScript SetIFrameUrl
+            if errors.Length = 0 then Cmd.OfFunc.perform Iframe.generateHtmlBlobUrl code SetIFrameUrl else Cmd.none
         ]
     | FetchedTableOfContents tableOfContents ->
         let url = Router.currentUrl ()
@@ -250,12 +291,13 @@ let update msg model =
             model with
                 CurrentPage = currentPage
                 TableOfContents = tableOfContents
+                IsLoadingDocumentation = false
         },
         Cmd.batch [
             Cmd.ofMsg CalculateMarkdownAndCodeValues
             Cmd.ofMsg CalculateDocEntryNavigation
         ]
-    | FetchTableOfContentsExn exn -> model, Cmd.none // TODO: this.
+    | FetchTableOfContentsExn _ -> { model with IsLoadingDocumentation = false }, Cmd.none
     | SetUrl url ->
         let currentPage = getCurrentPage model.TableOfContents url
 
@@ -289,197 +331,250 @@ let update msg model =
         },
         Cmd.none
     | DebouncerSelfMsg debouncerMsg ->
-        let (debouncerModel, debouncerCmd) = Debouncer.update debouncerMsg model.Debouncer
+        let debouncerModel, debouncerCmd = Debouncer.update debouncerMsg model.Debouncer
 
         {
             model with
                 Debouncer = debouncerModel
         },
         debouncerCmd
+    | ToggleTheme ->
+        let theme =
+            match model.Theme with
+            | Light -> Dark
+            | Dark -> Light
 
-let (|DesktopSize|MobileSize|) (screenSize: ScreenSize) =
-    match screenSize with
-    | ScreenSize.Desktop
-    | ScreenSize.WideScreen -> DesktopSize
-    | ScreenSize.Tablet
-    | ScreenSize.Mobile
-    | ScreenSize.MobileLandscape -> MobileSize
+        { model with Theme = theme }, Cmd.ofEffect (fun _ -> Theme.saveToStorage theme)
 
-let mobileNavbar =
-    Html.ul [ Html.li [ Html.a [ prop.href (Router.format []); prop.text "F# For You" ] ] ]
-
-let imageLink href src text =
-    Html.a [
-        prop.href href
-        prop.target "_blank"
-        prop.children [
-            Html.img [
-                prop.src src
-                prop.width 40
-                prop.height 40
-                prop.style [ style.marginRight (length.px 5) ]
-            ]
-            Html.small (text: string)
-        ]
-    ]
-
-let desktopNavbar = [
-    Html.ul [ Html.li [ imageLink (Router.format []) "img/fsharp.png" "F# For You!" ] ]
-
-    Html.ul [
-        Html.li [ imageLink "https://fable.io" "img/fable.png" "Powered by Fable" ]
-        Html.li [
-            imageLink "https://github.com/fsharpforyou/tour" "img/github.png" "View Source Code"
-        ]
-    ]
-]
-
-module View =
+module TourView =
     [<ReactComponent>]
     let AppView () =
         let model, dispatch = React.useElmish (init, update)
-        let screenSize = React.useResponsive Breakpoints.defaults
 
         React.router [
             router.onUrlChanged (SetUrl >> dispatch)
             router.children [
-                Html.main [
-                    prop.style [
-                        style.display.grid
-
-                        match screenSize with
-                        | MobileSize ->
-                            style.gridTemplateAreas [| [| "header" |]; [| "markdown" |]; [| "editor" |] |]
-                            style.gridTemplateRows [| length.percent 10; length.auto; length.px 750 |]
-                            style.gridTemplateColumns [| length.percent 100 |]
-                        | DesktopSize ->
-                            style.height (length.percent 100)
-                            style.gridTemplateAreas [| [| "header"; "header" |]; [| "markdown"; "editor" |] |]
-                            style.gridTemplateRows [| length.percent 10; length.percent 90 |]
-                            style.gridTemplateColumns [| length.percent 50; length.percent 50 |]
-                    ]
+                Html.div [
+                    let themeClassName =
+                        match model.Theme with
+                        | Light -> "light"
+                        | Dark -> "dark"
+                    
+                    prop.className  $"tour-app {themeClassName}"
                     prop.children [
+                        Html.a [
+                            prop.href "#main-content"
+                            prop.className "skip-link"
+                            prop.text "Skip to lesson"
+                        ]
                         Html.header [
-                            prop.style [ style.gridArea "header" ]
+                            prop.className "tour-header"
                             prop.children [
-                                Html.nav [
-                                    match screenSize with
-                                    | MobileSize -> mobileNavbar
-                                    | DesktopSize -> yield! desktopNavbar
-
-                                    Html.ul [
-                                        Html.button [ prop.text "Run"; prop.onClick (fun _ -> dispatch Compile) ]
-                                    ]
-                                ]
-                            ]
-                        ]
-                        Html.section [
-                            prop.id "markdown-content"
-                            prop.style [
-                                style.gridArea "markdown"
-                                style.custom ("text-wrap", "balance")
-                                style.overflowX.hidden
-                            ]
-                            prop.children [
-                                Markdown.markdown [
-                                    markdown.children model.Markdown
-                                    markdown.components [
-                                        markdown.components.code (fun props ->
-                                            if props.isInline then
-                                                Html.code props.children
-                                            else
-                                                let style =
-                                                    import "vs" "react-syntax-highlighter/dist/esm/styles/prism"
-
-                                                let language = props.className.Replace("language-", "")
-
-                                                SyntaxHighlighter.highlighter [
-                                                    SyntaxHighlighter.language language
-                                                    SyntaxHighlighter.style style
-                                                    SyntaxHighlighter.children props.children
-                                                ])
-                                    ]
-                                ]
-
-                                Html.nav [
-                                    Html.ul [
-                                        match model.DocEntryNavigation.PreviousEntry with
-                                        | None -> Html.none
-                                        | Some entry ->
-                                            Html.li [
-                                                Html.a [
-                                                    prop.href (Router.format entry.Route)
-                                                    prop.text $"< {entry.Title}"
-                                                ]
-                                            ]
-                                        Html.li [
-                                            Html.a [
-                                                prop.href (Router.format [ "table-of-contents" ])
-                                                prop.text "Table of Contents"
-                                            ]
-                                        ]
-                                        match model.DocEntryNavigation.NextEntry with
-                                        | None -> Html.none
-                                        | Some entry ->
-                                            Html.li [
-                                                Html.a [
-                                                    prop.href (Router.format entry.Route)
-                                                    prop.text $"{entry.Title} >"
-                                                ]
-                                            ]
-                                    ]
-                                ]
-                            ]
-                        ]
-                        Html.section [
-                            prop.style [ style.gridArea "editor" ]
-                            prop.children [
-                                Html.section [
-                                    prop.style [ style.height (length.percent 70) ]
+                                Html.a [
+                                    prop.href (Router.format [])
+                                    prop.className "tour-brand"
                                     prop.children [
-                                        MonacoEditor.editor [
-                                            MonacoEditor.defaultLanguage "fsharp"
-                                            MonacoEditor.value model.FSharpCode
-                                            MonacoEditor.theme "vs"
-                                            MonacoEditor.onChange (SetFSharpCode >> dispatch)
-                                            MonacoEditor.onMount (
-                                                Editor.onFSharpEditorDidMount model.Worker (SetEditor >> dispatch)
-                                            )
+                                        Html.img [
+                                            prop.src "img/fsharp.png"
+                                            prop.alt "F#"
+                                            prop.className "tour-logo"
+                                        ]
+                                        Html.text "Language Tour"
+                                    ]
+                                ]
+                                Html.nav [
+                                    prop.ariaLabel "Primary navigation"
+                                    prop.children [
+                                        Html.button [
+                                            prop.className "run-button header-run-button"
+                                            prop.text "Run"
+                                            prop.disabled (model.CompileState = Compiling)
+                                            prop.onClick (fun _ -> dispatch Compile)
+                                        ]
+                                        Html.a [
+                                            prop.href "https://github.com/fsharpforyou/tour"
+                                            prop.target "_blank"
+                                            prop.rel "noreferrer"
+                                            prop.ariaLabel "View source on GitHub"
+                                            prop.title "View source on GitHub"
+                                            prop.children [
+                                                Html.i [
+                                                    prop.className "fa-brands fa-github"
+                                                    prop.ariaHidden true
+                                                ]
+                                            ]
+                                        ]
+                                        Html.button [
+                                            let label =
+                                               match model.Theme with
+                                                | Light -> "Switch to dark mode"
+                                                | Dark -> "Switch to light mode"
+
+                                            prop.className "icon-button"
+                                            prop.onClick (fun _ -> dispatch ToggleTheme)
+                                            prop.ariaPressed (model.Theme = Dark)
+                                            prop.ariaLabel label
+                                            prop.title label
+                                            prop.children [
+                                                Html.i [
+                                                    prop.className (
+                                                        match model.Theme with
+                                                        | Light -> "fa-solid fa-moon"
+                                                        | Dark -> "fa-solid fa-sun"
+                                                    )
+                                                    prop.ariaHidden true
+                                                ]
+                                            ]
                                         ]
                                     ]
                                 ]
+                            ]
+                        ]
+                        Html.main [
+                            prop.id "main-content"
+                            prop.className "tour-main"
+                            prop.children [
                                 Html.article [
-                                    prop.style [ style.height (length.percent 30); style.overflow.scroll ]
+                                    prop.id "markdown-content"
+                                    prop.className "reading-pane"
                                     prop.children [
-                                        Html.h4 "Output"
-                                        for (log, level) in model.Logs do
-                                            Html.p [
-                                                prop.style [ style.color (LogLevel.toCssColor level) ]
-                                                prop.text log
+                                        if model.IsLoadingDocumentation then
+                                            Html.div [
+                                                prop.className "documentation-loading"
+                                                prop.role "status"
+                                                prop.children [
+                                                    Html.span [ prop.className "loading-spinner"; prop.ariaHidden true ]
+                                                    Html.p "Loading lesson…"
+                                                ]
                                             ]
+                                        else
+                                            Markdown.markdown [
+                                                markdown.children model.Markdown
+                                                markdown.components [
+                                                markdown.components.code (fun props ->
+                                                    if props.isInline then
+                                                        Html.code props.children
+                                                    else
+                                                        let syntaxStyle =
+                                                            match model.Theme with
+                                                            | Light ->
+                                                                import "vs" "react-syntax-highlighter/dist/esm/styles/prism"
+                                                            | Dark ->
+                                                                import "vscDarkPlus" "react-syntax-highlighter/dist/esm/styles/prism"
 
-                                            Html.hr []
+                                                        let language = props.className.Replace("language-", "")
+
+                                                        SyntaxHighlighter.highlighter [
+                                                            SyntaxHighlighter.className "markdown-code-block"
+                                                            SyntaxHighlighter.language language
+                                                            SyntaxHighlighter.style syntaxStyle
+                                                            SyntaxHighlighter.customStyle (
+                                                                createObj [
+                                                                    "border" ==>
+                                                                        match model.Theme with
+                                                                        | Light -> "1px solid #b9d8e9"
+                                                                        | Dark -> "1px solid #41647d"
+                                                                    "background" ==>
+                                                                        match model.Theme with
+                                                                        | Light -> "#f5f9fc"
+                                                                        | Dark -> "#111827"
+                                                                    "borderRadius" ==> "0"
+                                                                ]
+                                                            )
+                                                            SyntaxHighlighter.children props.children
+                                                        ])
+                                                ]
+                                            ]
+                                    ]
+                                ]
+                                Html.section [
+                                    prop.className "coding-pane"
+                                    prop.children [
+                                        Html.div [
+                                            prop.className "code-editor"
+                                            prop.children [
+                                                MonacoEditor.editor [
+                                                    MonacoEditor.defaultLanguage "fsharp"
+                                                    MonacoEditor.value model.FSharpCode
+                                                    MonacoEditor.theme (
+                                                        match model.Theme with
+                                                        | Light -> "vs"
+                                                        | Dark -> "vs-dark"
+                                                    )
+                                                    MonacoEditor.options (
+                                                        createObj [
+                                                            "fontSize" ==> 16
+                                                            "lineHeight" ==> 27
+                                                            "fontFamily" ==> "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace"
+                                                            "fontLigatures" ==> false
+                                                            "automaticLayout" ==> true
+                                                            "minimap" ==> createObj [ "enabled" ==> false ]
+                                                            "padding" ==> createObj [ "top" ==> 18; "bottom" ==> 18 ]
+                                                            "scrollBeyondLastLine" ==> false
+                                                            "renderLineHighlight" ==> "gutter"
+                                                        ]
+                                                    )
+                                                    MonacoEditor.onChange (SetFSharpCode >> dispatch)
+                                                    MonacoEditor.onMount (
+                                                        Editor.onFSharpEditorDidMount model.Worker (SetEditor >> dispatch)
+                                                    )
+                                                ]
+                                            ]
+                                        ]
+                                        Html.section [
+                                            prop.className "program-output"
+                                            prop.ariaLive.polite
+                                            prop.ariaLabel "Program output"
+                                            prop.children [
+                                                Html.header [
+                                                    prop.className "output-header"
+                                                    prop.children [ Html.h2 "OUTPUT" ]
+                                                ]
+                                                Html.div [
+                                                    prop.className "output-body"
+                                                    prop.role "log"
+                                                    prop.ariaLabel "Program output"
+                                                    prop.children [
+                                                        if not (List.isEmpty model.Logs) then
+                                                            for log, level in model.Logs do
+                                                                Html.p [
+                                                                    prop.className ("line " + LogLevel.cssClass level)
+                                                                    prop.text (
+                                                                        match level with
+                                                                        | LogLevel.Log -> log
+                                                                        | LogLevel.Warn -> "WARNING: " + log
+                                                                        | LogLevel.Error -> "ERROR: " + log
+                                                                    )
+                                                                ]
+                                                    ]
+                                                ]
+                                            ]
+                                        ]
                                     ]
                                 ]
                             ]
                         ]
+                        Html.footer [
+                            prop.className "tour-footer"
+                            prop.children [
+                                match model.DocEntryNavigation.PreviousEntry with
+                                | None -> Html.span ""
+                                | Some entry ->
+                                    Html.a [ prop.href (Router.format entry.Route); prop.text $"← {entry.Title}" ]
+                                Html.a [
+                                    prop.href (Router.format [ "table-of-contents" ])
+                                    prop.text "TABLE OF CONTENTS"
+                                ]
+                                match model.DocEntryNavigation.NextEntry with
+                                | None -> Html.span ""
+                                | Some entry ->
+                                    Html.a [ prop.href (Router.format entry.Route); prop.text $"{entry.Title} →" ]
+                            ]
+                        ]
                     ]
                 ]
-                Html.iframe [
-                    prop.src model.IFrameUrl
-                    prop.style [
-                        style.position.absolute
-                        style.width 0
-                        style.height 0
-                        style.border (0, borderStyle.hidden, "")
-                    ]
-                ]
-                Toastify.container [
-                    ContainerOption.autoClose 2000
-                    ContainerOption.position Position.BottomRight
-                    ContainerOption.theme Theme.Light
-                ]
+                Html.iframe [ prop.src model.IFrameUrl; prop.className "execution-frame" ]
             ]
         ]
 
-ReactDOM.createRoot(document.getElementById "app").render (View.AppView())
+ReactDOM.createRoot(document.getElementById "app").render (TourView.AppView())

@@ -21,12 +21,10 @@
     <PackageReference Include="alex312.Feliz.Router" Version="4.100.0" />
     <PackageReference Include="Fable.Core" Version="5.2.0" />
     <PackageReference Include="Fable.Fetch" Version="2.7.0" />
-    <PackageReference Include="Fable.ReactToastify" Version="1.0.0" />
     <PackageReference Include="Feliz" Version="3.3.3" />
     <PackageReference Include="Feliz.Markdown" Version="3.1.0" />
     <PackageReference Include="Feliz.Router" Version="4.0.0" />
     <PackageReference Include="Feliz.UseElmish" Version="5.0.0" />
-    <PackageReference Include="Feliz.UseMediaQuery" Version="2.1.0" />
     <PackageReference Include="Thoth.Elmish.Debouncer" Version="2.1.0" />
     <PackageReference Include="Thoth.Json" Version="10.5.1" />
   </ItemGroup>
