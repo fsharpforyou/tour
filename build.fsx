@@ -22,7 +22,7 @@ module Directories =
 
 module Stages =
     let clean =
-        stage "Clean" { run (fun _ -> !! "public/js" ++ "dist/" |> Shell.cleanDirs) }
+        stage "Clean" { run (fun _ -> !!"public/js" ++ "dist/" |> Shell.cleanDirs) }
 
     let dotnetRestore =
         stage "Restore .NET dependencies" {

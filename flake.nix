@@ -15,10 +15,10 @@
       with pkgs; {
         devShells.default = mkShell {
           packages = [
-            nodejs_20
-            dotnet-sdk_8
+            nodejs_24
+            dotnetCorePackages.sdk_10_0-bin
           ];
-          DOTNET_ROOT = "${dotnet-sdk_8}";
+          DOTNET_ROOT = "${dotnetCorePackages.sdk_10_0-bin}";
         };
       });
 }

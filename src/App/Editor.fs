@@ -174,10 +174,8 @@ let createCompletionProvider getCompletions =
             |> Some
 
         member this.resolveCompletionItem
-            (
-                item: Monaco.Languages.CompletionItem,
-                token: Monaco.CancellationToken
-            ) : Monaco.Languages.ProviderResult<Monaco.Languages.CompletionItem> =
+            (item: Monaco.Languages.CompletionItem, token: Monaco.CancellationToken)
+            : Monaco.Languages.ProviderResult<Monaco.Languages.CompletionItem> =
             item |> U2.Case1 |> Some
 
         member this.triggerCharacters
@@ -188,11 +186,11 @@ let createCompletionProvider getCompletions =
 let createDefinitionProvider getDeclarationLocation =
     { new Monaco.Languages.DefinitionProvider with
         member this.provideDefinition
-            (
-                model: Monaco.Editor.ITextModel,
-                position: Monaco.Position,
-                token: Monaco.CancellationToken
-            ) : Monaco.Languages.ProviderResult<U2<Monaco.Languages.Definition, ResizeArray<Monaco.Languages.LocationLink>>> =
+            (model: Monaco.Editor.ITextModel, position: Monaco.Position, token: Monaco.CancellationToken)
+            : Monaco.Languages.ProviderResult<
+                  U2<Monaco.Languages.Definition, ResizeArray<Monaco.Languages.LocationLink>>
+               >
+            =
             async {
                 let lineText = model.getLineContent (position.lineNumber)
                 let! loc = getDeclarationLocation position.lineNumber position.column lineText

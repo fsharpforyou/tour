@@ -1,4 +1,4 @@
-let negative x = x * - 1
+let negative x = x * -1
 let double x = x * 2
 
 3 |> negative |> double |> printfn "double(negative(3)) = %d"
