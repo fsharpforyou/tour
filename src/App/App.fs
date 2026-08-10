@@ -18,6 +18,9 @@ open Feliz.UseMediaQuery
 importSideEffects "react-toastify/dist/ReactToastify.css"
 importSideEffects "./monaco-vite.js"
 
+module Helper =
+    let inline mkProperty<'t> (key: string) (value: obj) : 't = (key, box value) |> unbox<'t>
+
 [<RequireQualifiedAccess>]
 type LogLevel =
     | Log
@@ -66,30 +69,27 @@ type Msg =
 
 [<Erase>]
 type SyntaxHighlighter =
-    static member inline language(value: string) = Interop.mkAttr "language" value
-    static member inline style(value: string) = Interop.mkAttr "style" value
-    static member inline children(value: ReactElement seq) = Interop.mkAttr "children" value
+    static member inline language(value: string) = Helper.mkProperty "language" value
+    static member inline style(value: string) = Helper.mkProperty "style" value
+    static member inline children(value: ReactElement seq) = Helper.mkProperty "children" value
 
-    static member inline highlighter(properties: IReactProperty list) =
-        Interop.reactApi.createElement (
-            import "Prism as ReactSyntaxHighlighter" "react-syntax-highlighter",
-            createObj !!properties
-        )
+    static member inline highlighter(properties: seq<IReactProperty>) =
+        ReactLegacy.createElement(unbox<ReactElement>(import "Prism as ReactSyntaxHighlighter" "react-syntax-highlighter"), createObj !!properties)
 
 [<Erase>]
 type MonacoEditor =
-    static member inline onChange(f: string -> unit) = Interop.mkAttr "onChange" f
-    static member inline theme(value: string) = Interop.mkAttr "theme" value
-    static member inline defaultLanguage(value: string) = Interop.mkAttr "defaultLanguage" value
-    static member inline value(value: string) = Interop.mkAttr "value" value
-    static member inline width(value: string) = Interop.mkAttr "width" value
-    static member inline height(value: string) = Interop.mkAttr "height" value
+    static member inline onChange(f: string -> unit) = Helper.mkProperty "onChange" f
+    static member inline theme(value: string) = Helper.mkProperty "theme" value
+    static member inline defaultLanguage(value: string) = Helper.mkProperty "defaultLanguage" value
+    static member inline value(value: string) = Helper.mkProperty "value" value
+    static member inline width(value: string) = Helper.mkProperty "width" value
+    static member inline height(value: string) = Helper.mkProperty "height" value
 
     static member inline onMount(f: System.Func<Monaco.Editor.IStandaloneCodeEditor, Monaco.IExports, unit>) =
-        Interop.mkAttr "onMount" f
+        Helper.mkProperty "onMount" f
 
     static member inline editor(properties: IReactProperty list) =
-        Interop.reactApi.createElement (import "Editor" "@monaco-editor/react", createObj !!properties)
+        ReactLegacy.createElement(unbox<ReactElement>(import "Editor" "@monaco-editor/react"), createObj !!properties)
 
 module WebWorker =
     let create () = Worker.Create(Constants.worker)
@@ -203,7 +203,7 @@ let update msg model =
     | SetFSharpCode code ->
         let (debouncerModel, debouncerCmd) =
             model.Debouncer
-            |> Debouncer.bounce (TimeSpan.FromSeconds 1) "user_input" ParseCode
+            |> Debouncer.bounce (TimeSpan.FromSeconds 1L) "user_input" ParseCode 
 
         {
             model with
