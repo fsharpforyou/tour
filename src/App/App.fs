@@ -16,6 +16,12 @@ open System
 importSideEffects "./monaco-vite.js"
 importSideEffects "./styles.css"
 
+let supressedWarningMessages = [| "https://aka.ms/fsharp-implicit-convs" |]
+
+let shouldBeSupressed (error: Error) =
+    supressedWarningMessages
+    |> Array.exists (fun supressedMessage -> error.Message.Contains supressedMessage)
+
 module Helper =
     let inline mkProperty<'t> (key: string) (value: obj) : 't = (key, box value) |> unbox<'t>
 
@@ -134,7 +140,12 @@ module WebWorker =
             |> Observable.add (function
                 | Loaded _ -> ()
                 | LoadFailed -> dispatch (AddConsoleLog(LogLevel.Error, "The F# compiler could not load."))
-                | ParsedCode errors -> errors |> Editor.mapErrorToMarker |> SetMarkers |> dispatch
+                | ParsedCode errors ->
+                    errors
+                    |> Array.filter (shouldBeSupressed >> not)
+                    |> Editor.mapErrorToMarker
+                    |> SetMarkers
+                    |> dispatch
                 | CompilationFinished(code, lang, errors, stats) -> dispatch (Compiled(code, lang, errors, stats))
                 | CompilationsFinished(code, lang, errors, stats) -> ()
                 | CompilerCrashed msg -> dispatch (AddConsoleLog(LogLevel.Error, "Compiler failed: " + msg))
@@ -268,6 +279,8 @@ let update msg model =
         { model with Logs = logs }, Cmd.none
     | Compiled(_, _, _, _) when model.CompilingRevision <> Some model.CodeRevision -> model, Cmd.none
     | Compiled(code, _, errors, _) ->
+        let errors = errors |> Array.filter (shouldBeSupressed >> not)
+
         let logs =
             if errors.Length = 0 then
                 model.Logs
@@ -289,7 +302,7 @@ let update msg model =
         model,
         Cmd.batch [
             errors |> Editor.mapErrorToMarker |> SetMarkers |> Cmd.ofMsg
-            if errors.Length = 0 then
+            if errors.Length = 0 || Array.forall _.IsWarning errors then
                 Cmd.OfFunc.perform Iframe.generateHtmlBlobUrl code SetIFrameUrl
             else
                 Cmd.none

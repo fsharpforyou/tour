@@ -1,30 +1,35 @@
-# F# Language Tour
+# Learn F# by building a bookshop
 
-Hello there! Curious about this thing called F# and maybe even interested in learning it? You've come to the right place!
+This tour is for programmers who are new to F# and functional programming. It
+starts with expressions and immutable values, then develops functions, domain
+types, collections, explicit errors, modules, object-oriented interoperability,
+and controlled mutation.
 
-F# is a versatile, multi-paradigm programming language with a functional-first approach, known for its strong and static typing. It seamlessly runs on Microsoft's `.NET` runtime, offering a powerful integration with the .NET ecosystem. Additionally, F# extends its reach beyond the .NET platform, supporting compilation to JavaScript, TypeScript, Python, and [more](https://fable.io/docs/#available-targets), making it a truly cross-platform language with broad applicability. It's a language that values being *succinct*, *correct*, and *performant*. Now, what does any of that mean?
-- Succinct in this case means the ability to convey ideas using
-  relatively little code. If you've used Python before, F#'s syntax
-  should seem somewhat familiar
-- Correct meaning that with the use of F#'s strong type system, one
-  can make entire classes of bugs non-applicable
-  - For instance, using `Option` types to denote optional values
-    reduces the presence of nulls
-  - And, using `Result` types reduces the presence of exceptions by
-    requiring you to handle errors explicitly
-- Multi-paradigm means that it supports imperative, object-oriented,
-  and functional coding styles
-- Functional-first means that it defaults to functional programming,
-  using simple, immutable pieces of data being passed around by
-  functions that take inputs and return output, without side effects
-- Being a `.NET` language, F# has access to a rich standard library
-  and extensive ecosystem on top of a battle-tested, high-performance
-  runtime
+You do not need prior knowledge of .NET. When a lesson uses a property, method,
+namespace, or other .NET-style API, it explains the relevant idea in context.
 
-F# is particularly good for web applications, machine learning, and data science. It's also great for interactive development, both via
-REPL and notebooks.
+## How the tour works
 
-This tour covers all aspects of the F# language, and assuming you have some prior programming experience should teach you everything you need to write real programs in F#. If at any point you get stuck or have a question do not hesitate to ask in the
-[F# Discord server](https://discord.gg/fsharp-196693847965696000).
+Every lesson has two parts. The reading pane develops one idea through small
+examples. The editor contains one complete program that you can change and run.
+Do not treat the program as a finished answer: predict what it will do, alter one
+thing, and let the compiler show you which assumptions were wrong.
 
-If this sounds appealing to you, then go on ahead and let's get started!
+The examples share a bookshop domain. It begins as a few primitive values and
+gradually becomes a catalog, inventory, shopping carts, customers, and orders.
+Early representations are intentionally simple. Later lessons replace them when
+records, unions, options, results, and domain-specific types can express the same
+ideas more accurately.
+
+## What “functional-first” means here
+
+F# supports functional, object-oriented, and imperative programming. This tour
+starts with immutable data and functions because they make dependencies and
+state changes easy to see. Later, it introduces classes, interfaces, exceptions,
+mutable values, and loops without presenting those tools as mistakes.
+
+The aim is practical: learn to choose data that describes the problem, write
+small functions with clear types, and combine them into behavior that remains
+readable as the program grows.
+
+Begin with the first lesson. Each later lesson assumes the ideas before it.
