@@ -8,5 +8,5 @@ npm start
 ```
 
 ## Inspirations
-- [Fable REPL](https://github.com/fable-compiler/repl)
 - [Gleam Language Tour](https://tour.gleam.run)
+- [Learn You a Haskell](https://learnyouahaskell.github.io)
