@@ -1,197 +1,110 @@
 {
-    "root": "cover.md",
-    "categories": [
-        {
-            "title": "Basics",
-            "route_segment": "basics",
-            "pages": [
-                {
-                    "title": "Hello, World!",
-                    "route_segment": "hello-world",
-                    "fsharp_file": "basics/hello-world.fsx",
-                    "markdown_file": "basics/hello-world.md"
-                },
-                {
-                    "title": "Expressions",
-                    "route_segment": "expressions",
-                    "fsharp_file": "basics/expressions.fsx",
-                    "markdown_file": "basics/expressions.md"
-                },
-                {
-                    "title": "Primitive Types",
-                    "route_segment": "primitive-types",
-                    "fsharp_file": "basics/primitive-types.fsx",
-                    "markdown_file": "basics/primitive-types.md"
-                },
-                {
-                    "title": "String Formatting",
-                    "route_segment": "string-formatting",
-                    "fsharp_file": "basics/string-formatting.fsx",
-                    "markdown_file": "basics/string-formatting.md"
-                },
-                {
-                    "title": "Operators",
-                    "route_segment": "operators",
-                    "fsharp_file": "basics/operators.fsx",
-                    "markdown_file": "basics/operators.md"
-                },
-                {
-                    "title": "Conditional Expressions",
-                    "route_segment": "conditional-expressions",
-                    "fsharp_file": "basics/conditional-expressions.fsx",
-                    "markdown_file": "basics/conditional-expressions.md"
-                },
-                {
-                    "title": "Patterns and Match Expressions",
-                    "route_segment": "pattern-matching",
-                    "fsharp_file": "basics/patterns-and-match-expressions.fsx",
-                    "markdown_file": "basics/patterns-and-match-expressions.md"
-                }
-            ]
-        },
-        {
-            "title": "Functions",
-            "route_segment": "functions",
-            "pages": [
-                {
-                    "title": "Defining Functions",
-                    "route_segment": "definition",
-                    "fsharp_file": "functions/defining-functions.fsx",
-                    "markdown_file": "functions/defining-functions.md"
-                },
-                {
-                    "title": "Functions as Values",
-                    "route_segment": "values",
-                    "fsharp_file": "functions/functions-as-values.fsx",
-                    "markdown_file": "functions/functions-as-values.md"
-                },
-                {
-                    "title": "Recursive Functions",
-                    "route_segment": "recursive-functions",
-                    "fsharp_file": "functions/recursive-functions.fsx",
-                    "markdown_file": "functions/recursive-functions.md"
-                },
-                {
-                    "title": "Currying and Partial Application",
-                    "route_segment": "currying-and-partial-application",
-                    "fsharp_file": "functions/currying-and-partial-application.fsx",
-                    "markdown_file": "functions/currying-and-partial-application.md"
-                },
-                {
-                    "title": "Pipelines and Composition",
-                    "route_segment": "pipelines-and-composition",
-                    "fsharp_file": "functions/pipelines-and-composition.fsx",
-                    "markdown_file": "functions/pipelines-and-composition.md"
-                }
-            ]
-        },
-        {
-            "title": "Data and Types",
-            "route_segment": "data-and-types",
-            "pages": [
-                {
-                    "title": "Tuples",
-                    "route_segment": "tuples",
-                    "fsharp_file": "data-and-types/tuples.fsx",
-                    "markdown_file": "data-and-types/tuples.md"
-                },
-                {
-                    "title": "Lists",
-                    "route_segment": "lists",
-                    "fsharp_file": "data-and-types/lists.fsx",
-                    "markdown_file": "data-and-types/lists.md"
-                },
-                {
-                    "title": "Sequences",
-                    "route_segment": "sequences",
-                    "fsharp_file": "data-and-types/sequences.fsx",
-                    "markdown_file": "data-and-types/sequences.md"
-                },
-                {
-                    "title": "Sequence Expressions",
-                    "route_segment": "sequence-expressions",
-                    "fsharp_file": "data-and-types/sequence-expressions.fsx",
-                    "markdown_file": "data-and-types/sequence-expressions.md"
-                },
-                {
-                    "title": "Type Abbreviations",
-                    "route_segment": "abbreviations",
-                    "fsharp_file": "data-and-types/abbreviations.fsx",
-                    "markdown_file": "data-and-types/abbreviations.md"
-                },
-                {
-                    "title": "Records",
-                    "route_segment": "records",
-                    "fsharp_file": "data-and-types/records.fsx",
-                    "markdown_file": "data-and-types/records.md"
-                },
-                {
-                    "title": "Discriminated Unions",
-                    "route_segment": "discriminated-unions",
-                    "fsharp_file": "data-and-types/discriminated-unions.fsx",
-                    "markdown_file": "data-and-types/discriminated-unions.md"
-                },
-                {
-                    "title": "Generic Types",
-                    "route_segment": "generic-types",
-                    "fsharp_file": "data-and-types/generic-types.fsx",
-                    "markdown_file": "data-and-types/generic-types.md"
-                },
-                {
-                    "title": "The Option Type",
-                    "route_segment": "options",
-                    "fsharp_file": "data-and-types/the-option-type.fsx",
-                    "markdown_file": "data-and-types/the-option-type.md"
-                },
-                {
-                    "title": "The Result Type",
-                    "route_segment": "results",
-                    "fsharp_file": "data-and-types/the-result-type.fsx",
-                    "markdown_file": "data-and-types/the-result-type.md"
-                },
-                {
-                    "title": "Units of Measure",
-                    "route_segment": "units-of-measure",
-                    "fsharp_file": "data-and-types/units-of-measure.fsx",
-                    "markdown_file": "data-and-types/units-of-measure.md"
-                }
-            ]
-        },
-        {
-            "title": "Object Programming",
-            "route_segment": "object-programming",
-            "pages": [
-                {
-                    "title": "Objects and Members",
-                    "route_segment": "objects-and-members",
-                    "fsharp_file": "object-programming/objects-and-members.fsx",
-                    "markdown_file": "object-programming/objects-and-members.md"
-                },
-                {
-                    "title": "Interfaces",
-                    "route_segment": "interfaces",
-                    "fsharp_file": "object-programming/interfaces.fsx",
-                    "markdown_file": "object-programming/interfaces.md"
-                },
-                {
-                    "title": "Abstract Classes and Inheritance",
-                    "route_segment": "abstract-classes-and-inheritance",
-                    "fsharp_file": "object-programming/abstract-classes-and-inheritance.fsx",
-                    "markdown_file": "object-programming/abstract-classes-and-inheritance.md"
-                },
-                {
-                    "title": "Object Expressions",
-                    "route_segment": "object-expressions",
-                    "fsharp_file": "object-programming/object-expressions.fsx",
-                    "markdown_file": "object-programming/object-expressions.md"
-                },
-                {
-                    "title": "Type Extensions",
-                    "route_segment": "type-extensions",
-                    "fsharp_file": "object-programming/type-extensions.fsx",
-                    "markdown_file": "object-programming/type-extensions.md"
-                }
-            ]
-        }
-    ]
+  "root": "cover.md",
+  "categories": [
+    {
+      "title": "Foundations",
+      "route_segment": "foundations",
+      "pages": [
+        { "title": "Everything Starts with Expressions", "route_segment": "01-expressions", "fsharp_file": "foundations/01-expressions.fsx", "markdown_file": "foundations/01-expressions.md" },
+        { "title": "Values and let Bindings", "route_segment": "02-bindings", "fsharp_file": "foundations/02-bindings.fsx", "markdown_file": "foundations/02-bindings.md" },
+        { "title": "Numbers and Arithmetic", "route_segment": "03-numbers", "fsharp_file": "foundations/03-numbers.fsx", "markdown_file": "foundations/03-numbers.md" },
+        { "title": "Strings, Characters, and Text", "route_segment": "04-text", "fsharp_file": "foundations/04-text.fsx", "markdown_file": "foundations/04-text.md" },
+        { "title": "Booleans and Comparisons", "route_segment": "05-booleans", "fsharp_file": "foundations/05-booleans.fsx", "markdown_file": "foundations/05-booleans.md" },
+        { "title": "Conditional Expressions", "route_segment": "06-conditionals", "fsharp_file": "foundations/06-conditionals.fsx", "markdown_file": "foundations/06-conditionals.md" },
+        { "title": "Types and Type Inference", "route_segment": "07-types", "fsharp_file": "foundations/07-types.fsx", "markdown_file": "foundations/07-types.md" }
+      ]
+    },
+    {
+      "title": "Functions",
+      "route_segment": "functions",
+      "pages": [
+        { "title": "Your First Functions", "route_segment": "08-functions", "fsharp_file": "functions/08-functions.fsx", "markdown_file": "functions/08-functions.md" },
+        { "title": "Unit, Effects, and Functions That Do Things", "route_segment": "09-unit-and-effects", "fsharp_file": "functions/09-unit-and-effects.fsx", "markdown_file": "functions/09-unit-and-effects.md" },
+        { "title": "Functions with Multiple Inputs", "route_segment": "10-multiple-inputs", "fsharp_file": "functions/10-multiple-inputs.fsx", "markdown_file": "functions/10-multiple-inputs.md" },
+        { "title": "Local Bindings", "route_segment": "11-local-bindings", "fsharp_file": "functions/11-local-bindings.fsx", "markdown_file": "functions/11-local-bindings.md" },
+        { "title": "Functions Are Values", "route_segment": "12-function-values", "fsharp_file": "functions/12-function-values.fsx", "markdown_file": "functions/12-function-values.md" },
+        { "title": "Anonymous Functions", "route_segment": "13-lambdas", "fsharp_file": "functions/13-lambdas.fsx", "markdown_file": "functions/13-lambdas.md" },
+        { "title": "Higher-Order Functions", "route_segment": "14-higher-order", "fsharp_file": "functions/14-higher-order.fsx", "markdown_file": "functions/14-higher-order.md" },
+        { "title": "Partial Application and Currying", "route_segment": "15-partial-application", "fsharp_file": "functions/15-partial-application.fsx", "markdown_file": "functions/15-partial-application.md" },
+        { "title": "The Pipeline Operator", "route_segment": "16-pipelines", "fsharp_file": "functions/16-pipelines.fsx", "markdown_file": "functions/16-pipelines.md" },
+        { "title": "Function Composition", "route_segment": "17-composition", "fsharp_file": "functions/17-composition.fsx", "markdown_file": "functions/17-composition.md" }
+      ]
+    },
+    {
+      "title": "Modeling Data",
+      "route_segment": "modeling-data",
+      "pages": [
+        { "title": "Tuples", "route_segment": "18-tuples", "fsharp_file": "modeling-data/18-tuples.fsx", "markdown_file": "modeling-data/18-tuples.md" },
+        { "title": "Records", "route_segment": "19-records", "fsharp_file": "modeling-data/19-records.fsx", "markdown_file": "modeling-data/19-records.md" },
+        { "title": "Modeling with Records", "route_segment": "20-record-modeling", "fsharp_file": "modeling-data/20-record-modeling.fsx", "markdown_file": "modeling-data/20-record-modeling.md" },
+        { "title": "Discriminated Unions", "route_segment": "21-unions", "fsharp_file": "modeling-data/21-unions.fsx", "markdown_file": "modeling-data/21-unions.md" },
+        { "title": "Pattern Matching", "route_segment": "22-pattern-matching", "fsharp_file": "modeling-data/22-pattern-matching.fsx", "markdown_file": "modeling-data/22-pattern-matching.md" },
+        { "title": "Records and Unions", "route_segment": "23-records-and-unions", "fsharp_file": "modeling-data/23-records-and-unions.fsx", "markdown_file": "modeling-data/23-records-and-unions.md" },
+        { "title": "Making Invalid States Hard", "route_segment": "24-valid-states", "fsharp_file": "modeling-data/24-valid-states.fsx", "markdown_file": "modeling-data/24-valid-states.md" },
+        { "title": "Optional Values", "route_segment": "25-options", "fsharp_file": "modeling-data/25-options.fsx", "markdown_file": "modeling-data/25-options.md" },
+        { "title": "Working with Options", "route_segment": "26-option-functions", "fsharp_file": "modeling-data/26-option-functions.fsx", "markdown_file": "modeling-data/26-option-functions.md" },
+        { "title": "Success and Failure with Result", "route_segment": "27-results", "fsharp_file": "modeling-data/27-results.fsx", "markdown_file": "modeling-data/27-results.md" },
+        { "title": "Validation", "route_segment": "28-validation", "fsharp_file": "modeling-data/28-validation.fsx", "markdown_file": "modeling-data/28-validation.md" },
+        { "title": "Chaining Fallible Operations", "route_segment": "29-result-chains", "fsharp_file": "modeling-data/29-result-chains.fsx", "markdown_file": "modeling-data/29-result-chains.md" }
+      ]
+    },
+    {
+      "title": "Collections",
+      "route_segment": "collections",
+      "pages": [
+        { "title": "Lists and Their Recursive Shape", "route_segment": "30-lists", "fsharp_file": "collections/30-lists.fsx", "markdown_file": "collections/30-lists.md" },
+        { "title": "Transforming Lists with map", "route_segment": "31-list-map", "fsharp_file": "collections/31-list-map.fsx", "markdown_file": "collections/31-list-map.md" },
+        { "title": "Selecting Values with filter", "route_segment": "32-list-filter", "fsharp_file": "collections/32-list-filter.fsx", "markdown_file": "collections/32-list-filter.md" },
+        { "title": "Finding Values", "route_segment": "33-finding", "fsharp_file": "collections/33-finding.fsx", "markdown_file": "collections/33-finding.md" },
+        { "title": "Choosing and Partitioning Values", "route_segment": "34-choosing-and-partitioning", "fsharp_file": "collections/34-choosing-and-partitioning.fsx", "markdown_file": "collections/34-choosing-and-partitioning.md" },
+        { "title": "Folding Collections", "route_segment": "35-folds", "fsharp_file": "collections/35-folds.fsx", "markdown_file": "collections/35-folds.md" },
+        { "title": "Recursive Domain Data", "route_segment": "36-recursion", "fsharp_file": "collections/36-recursion.fsx", "markdown_file": "collections/36-recursion.md" },
+        { "title": "Arrays", "route_segment": "37-arrays", "fsharp_file": "collections/37-arrays.fsx", "markdown_file": "collections/37-arrays.md" },
+        { "title": "Sequences", "route_segment": "38-sequences", "fsharp_file": "collections/38-sequences.fsx", "markdown_file": "collections/38-sequences.md" },
+        { "title": "Maps and Keyed Lookup", "route_segment": "39-maps", "fsharp_file": "collections/39-maps.fsx", "markdown_file": "collections/39-maps.md" },
+        { "title": "Sets and Unique Values", "route_segment": "40-sets", "fsharp_file": "collections/40-sets.fsx", "markdown_file": "collections/40-sets.md" }
+      ]
+    },
+    {
+      "title": "The Bookshop Domain",
+      "route_segment": "bookshop-domain",
+      "pages": [
+        { "title": "Domain-Specific IDs", "route_segment": "41-domain-ids", "fsharp_file": "bookshop-domain/41-domain-ids.fsx", "markdown_file": "bookshop-domain/41-domain-ids.md" },
+        { "title": "Modeling the Catalog", "route_segment": "42-catalog", "fsharp_file": "bookshop-domain/42-catalog.fsx", "markdown_file": "bookshop-domain/42-catalog.md" },
+        { "title": "Customers and Contact", "route_segment": "43-customers", "fsharp_file": "bookshop-domain/43-customers.fsx", "markdown_file": "bookshop-domain/43-customers.md" },
+        { "title": "Inventory and Stock", "route_segment": "44-inventory", "fsharp_file": "bookshop-domain/44-inventory.fsx", "markdown_file": "bookshop-domain/44-inventory.md" },
+        { "title": "Shopping Carts", "route_segment": "45-shopping-carts", "fsharp_file": "bookshop-domain/45-shopping-carts.fsx", "markdown_file": "bookshop-domain/45-shopping-carts.md" },
+        { "title": "Pricing and Discounts", "route_segment": "46-pricing-and-discounts", "fsharp_file": "bookshop-domain/46-pricing-and-discounts.fsx", "markdown_file": "bookshop-domain/46-pricing-and-discounts.md" },
+        { "title": "Validating Orders", "route_segment": "47-validating-orders", "fsharp_file": "bookshop-domain/47-validating-orders.fsx", "markdown_file": "bookshop-domain/47-validating-orders.md" },
+        { "title": "Order States", "route_segment": "48-order-states", "fsharp_file": "bookshop-domain/48-order-states.fsx", "markdown_file": "bookshop-domain/48-order-states.md" }
+      ]
+    },
+    {
+      "title": "The Wider F# Language",
+      "route_segment": "wider-fsharp",
+      "pages": [
+        { "title": "Modules", "route_segment": "49-modules", "fsharp_file": "wider-fsharp/49-modules.fsx", "markdown_file": "wider-fsharp/49-modules.md" },
+        { "title": "Generic Functions and Types", "route_segment": "50-generics", "fsharp_file": "wider-fsharp/50-generics.fsx", "markdown_file": "wider-fsharp/50-generics.md" },
+        { "title": "Equality, Sorting, and Grouping", "route_segment": "51-equality-sorting", "fsharp_file": "wider-fsharp/51-equality-sorting.fsx", "markdown_file": "wider-fsharp/51-equality-sorting.md" },
+        { "title": "The .NET Type World", "route_segment": "52-dotnet-types", "fsharp_file": "wider-fsharp/52-dotnet-types.fsx", "markdown_file": "wider-fsharp/52-dotnet-types.md" },
+        { "title": "Objects and Classes", "route_segment": "53-objects-and-classes", "fsharp_file": "wider-fsharp/53-objects-and-classes.fsx", "markdown_file": "wider-fsharp/53-objects-and-classes.md" },
+        { "title": "Interfaces and Object Abstraction", "route_segment": "54-interfaces", "fsharp_file": "wider-fsharp/54-interfaces.fsx", "markdown_file": "wider-fsharp/54-interfaces.md" },
+        { "title": "Controlled Mutation and Mutable Arrays", "route_segment": "55-controlled-mutation", "fsharp_file": "wider-fsharp/55-controlled-mutation.fsx", "markdown_file": "wider-fsharp/55-controlled-mutation.md" },
+        { "title": "Loops and Imperative Iteration", "route_segment": "56-loops-and-iteration", "fsharp_file": "wider-fsharp/56-loops-and-iteration.fsx", "markdown_file": "wider-fsharp/56-loops-and-iteration.md" },
+        { "title": "Exceptions and Explicit Errors", "route_segment": "57-exceptions", "fsharp_file": "wider-fsharp/57-exceptions.fsx", "markdown_file": "wider-fsharp/57-exceptions.md" }
+      ]
+    },
+    {
+      "title": "Putting It Together",
+      "route_segment": "putting-it-together",
+      "pages": [
+        { "title": "Signatures and Small Pure Functions", "route_segment": "58-signatures-and-design", "fsharp_file": "putting-it-together/58-signatures-and-design.fsx", "markdown_file": "putting-it-together/58-signatures-and-design.md" },
+        { "title": "Placing Orders", "route_segment": "59-placing-orders", "fsharp_file": "putting-it-together/59-placing-orders.fsx", "markdown_file": "putting-it-together/59-placing-orders.md" },
+        { "title": "Payment and Cancellation", "route_segment": "60-payment-and-cancellation", "fsharp_file": "putting-it-together/60-payment-and-cancellation.fsx", "markdown_file": "putting-it-together/60-payment-and-cancellation.md" },
+        { "title": "Shipping and Reports", "route_segment": "61-shipping-and-reports", "fsharp_file": "putting-it-together/61-shipping-and-reports.fsx", "markdown_file": "putting-it-together/61-shipping-and-reports.md" },
+        { "title": "Final Functional Bookshop", "route_segment": "62-final-capstone", "fsharp_file": "putting-it-together/62-final-capstone.fsx", "markdown_file": "putting-it-together/62-final-capstone.md" },
+        { "title": "Optional: Result Computation Expressions", "route_segment": "63-result-expressions", "fsharp_file": "putting-it-together/63-result-expressions.fsx", "markdown_file": "putting-it-together/63-result-expressions.md" }
+      ]
+    }
+  ]
 }
