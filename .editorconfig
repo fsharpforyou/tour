@@ -1,4 +1,2 @@
-root = true
-
-[*.{fs, fsx}]
+[*.{fs,fsx}]
 fsharp_multiline_bracket_style = stroustrup
